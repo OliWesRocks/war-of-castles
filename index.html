@@ -213,14 +213,13 @@ const FACTION_COLORS = [
   '#1a7d34', // 3 Ninjas    — emerald
 ];
 
-// Hardcoded starting ownership for the static test map.
-// Each faction starts in a corner cluster (3 regions each); rest are neutral.
+// One home castle per faction; all other regions start neutral.
 // Key: `${r},${c}` → faction index
 const OWNERS = {
-  '0,0': 0, '1,0': 0, '0,1': 0,   // Merchants — NW
-  '0,3': 1, '0,2': 1, '1,3': 1,   // Warriors  — NE (coastal)
-  '4,0': 2, '3,0': 2, '4,1': 2,   // Stoics    — SW
-  '4,3': 3, '4,2': 3, '3,3': 3,   // Ninjas    — SE (coastal)
+  '0,0': 0,  // Merchants home castle — NW corner
+  '0,3': 1,  // Warriors  home castle — NE corner (coastal)
+  '4,0': 2,  // Stoics    home castle — SW corner
+  '4,3': 3,  // Ninjas    home castle — SE corner (coastal)
 };
 
 // 20 land regions (r = 0..4, c = 0..3)
