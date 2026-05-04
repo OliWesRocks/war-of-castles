@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>War of Castles</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #16110a; font-family: Georgia, 'Times New Roman', serif; }
+
+    #app { display: flex; width: 100%; height: 100%; }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 210px;
+      flex-shrink: 0;
+      height: 100%;
+      background: #16110a;
+      border-right: 2px solid #3a2810;
+      display: flex;
+      flex-direction: column;
+      padding: 18px 14px;
+    }
+    .game-title {
+      color: #c9a84c;
+      font-size: 15px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-align: center;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #3a2810;
+      margin-bottom: 16px;
+    }
+    .s-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #6a5030;
+      margin-bottom: 6px;
+    }
+    .s-section { margin-bottom: 16px; }
+    .sep { border: none; border-top: 1px solid #261a08; margin: 0 0 16px; }
+
+    .turn-row { display: flex; align-items: baseline; gap: 6px; }
+    .turn-num { color: #e8d090; font-size: 34px; line-height: 1; }
+    .turn-of  { color: #6a5030; font-size: 14px; }
+
+    .pips { display: flex; gap: 7px; margin-top: 8px; }
+    .pip {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #c9a84c; border: 1px solid #8a6820;
+    }
+    .pip.used { background: #261a08; border-color: #3a2810; }
+
+    .faction-list { display: flex; flex-direction: column; gap: 10px; }
+    .faction-row  { display: flex; align-items: center; gap: 8px; }
+    .f-dot {
+      width: 11px; height: 11px; border-radius: 2px; flex-shrink: 0;
+    }
+    .f-name { color: #c0a870; font-size: 13px; flex: 1; }
+    .f-meta { color: #6a5030; font-size: 11px; }
+
+    .event-box {
+      border: 1px dashed #2a1e0a; border-radius: 3px;
+      padding: 10px; min-height: 52px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .event-empty { color: #3a2810; font-size: 11px; font-style: italic; }
+
+    /* ── Canvas wrap ── */
+    #map-wrap { flex: 1; position: relative; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    /* ── Portrait guard ── */
+    #rotate-prompt {
+      display: none;
+      position: fixed; inset: 0; z-index: 100;
+      background: #16110a; color: #c9a84c;
+      font-family: Georgia, serif;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; font-size: 18px; text-align: center; padding: 40px;
+    }
+    .rot-icon { font-size: 56px; }
+
+    @media (orientation: portrait) {
+      #app { display: none; }
+      #rotate-prompt { display: flex; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="rotate-prompt">
+  <div class="rot-icon">&#8635;</div>
+  <div>Rotate your device to landscape to play</div>
+</div>
+
+<div id="app">
+  <aside id="sidebar">
+    <div class="game-title">War of Castles</div>
+
+    <div class="s-section">
+      <div class="s-label">Turn</div>
+      <div class="turn-row">
+        <span class="turn-num">1</span>
+        <span class="turn-of">/ 12</span>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-label">Moves Remaining</div>
+      <div class="pips">
+        <div class="pip"></div>
+        <div class="pip"></div>
+        <div class="pip"></div>
+      </div>
+    </div>
+
+    <hr class="sep">
+
+    <div class="s-section">
+      <div class="s-label">Factions</div>
+      <div class="faction-list">
+        <div class="faction-row">
+          <div class="f-dot" style="background:#d4801a"></div>
+          <div class="f-name">Merchants</div>
+          <div class="f-meta">— rgn</div>
+        </div>
+        <div class="faction-row">
+          <div class="f-dot" style="background:#b82020"></div>
+          <div class="f-name">Warriors</div>
+          <div class="f-meta">— rgn</div>
+        </div>
+        <div class="faction-row">
+          <div class="f-dot" style="background:#7848a8"></div>
+          <div class="f-name">Stoics</div>
+          <div class="f-meta">— rgn</div>
+        </div>
+        <div class="faction-row">
+          <div class="f-dot" style="background:#1e8c3a"></div>
+          <div class="f-name">Ninjas</div>
+          <div class="f-meta">— rgn</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="sep">
+
+    <div class="s-section">
+      <div class="s-label">World Event</div>
+      <div class="event-box">
+        <span class="event-empty">No event this turn</span>
+      </div>
+    </div>
+  </aside>
+
+  <div id="map-wrap">
+    <canvas id="canvas"></canvas>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+
+// ─── Logical coordinate space ─────────────────────────────────────────────────
+const LW = 1000, LH = 640;
+
+// ─── Node grid: 6 cols × 6 rows ───────────────────────────────────────────────
+// Shared vertices guarantee that adjacent polygons share exact edge geometry,
+// so there are no gaps or overlaps between regions.
+//
+// Base column x-positions and row y-positions:
+const NX = [0, 183, 374, 579, 724, 1000];
+const NY = [0, 131, 262, 394, 522, 640];
+
+// Organic offsets for internal nodes — border nodes stay exactly on the edge.
+// Layout: flat array, row-major (index = r*6 + c).
+const OFF = [
+  // r=0  top border — all zero
+  [0,0],[0,0],[0,0],[0,0],[0,0],[0,0],
+  // r=1
+  [0,0],[ 18,-10],[-12, 15],[-16, -8],[ 10,  8],[0,0],
+  // r=2
+  [0,0],[-10,-14],[ 14, 16],[ 12,-10],[ -5,  8],[0,0],
+  // r=3
+  [0,0],[ 10,-12],[-15, 12],[ -8, 10],[ 12, -8],[0,0],
+  // r=4
+  [0,0],[ -8,-10],[  6,-14],[ 10,  8],[ -8,  6],[0,0],
+  // r=5  bottom border — all zero
+  [0,0],[0,0],[0,0],[0,0],[0,0],[0,0],
+];
+
+// Build node array
+const NODES = OFF.map(([ox, oy], i) => {
+  const r = Math.floor(i / 6), c = i % 6;
+  return [NX[c] + ox, NY[r] + oy];
+});
+
+const N = (r, c) => NODES[r * 6 + c];
+
+// ─── Region definitions ───────────────────────────────────────────────────────
+const NEUTRAL_COLOR = '#d4c9a8'; // uniform parchment for all unowned land
+
+// Vivid faction colors — only shown on owned regions
+const FACTION_COLORS = [
+  '#c97d18', // 0 Merchants — amber
+  '#a82020', // 1 Warriors  — crimson
+  '#6a40a0', // 2 Stoics    — lavender
+  '#1a7d34', // 3 Ninjas    — emerald
+];
+
+// Hardcoded starting ownership for the static test map.
+// Each faction starts in a corner cluster (3 regions each); rest are neutral.
+// Key: `${r},${c}` → faction index
+const OWNERS = {
+  '0,0': 0, '1,0': 0, '0,1': 0,   // Merchants — NW
+  '0,3': 1, '0,2': 1, '1,3': 1,   // Warriors  — NE (coastal)
+  '4,0': 2, '3,0': 2, '4,1': 2,   // Stoics    — SW
+  '4,3': 3, '4,2': 3, '3,3': 3,   // Ninjas    — SE (coastal)
+};
+
+// 20 land regions (r = 0..4, c = 0..3)
+const landRegions = [];
+for (let r = 0; r < 5; r++) {
+  for (let c = 0; c < 4; c++) {
+    landRegions.push({
+      pts:     [N(r, c), N(r, c+1), N(r+1, c+1), N(r+1, c)],
+      owner:   OWNERS[`${r},${c}`] ?? null,
+      coastal: c === 3,
+    });
+  }
+}
+
+// 3 sea regions — right strip (logical cols 4-5).
+// The sea polygons include all shared col-4 vertices (N(1,4) and N(4,4)) so
+// that their left boundary matches the land regions' right boundary exactly.
+const seaRegions = [
+  { pts: [N(0,4), N(0,5), N(2,5), N(2,4), N(1,4)] },  // northern sea
+  { pts: [N(2,4), N(2,5), N(3,5), N(3,4)]           },  // mid-sea channel
+  { pts: [N(3,4), N(3,5), N(5,5), N(5,4), N(4,4)] },  // southern sea
+];
+
+// ─── Scale helpers ────────────────────────────────────────────────────────────
+const sx  = x  => x * canvas.width  / LW;
+const sy  = y  => y * canvas.height / LH;
+const spt = pt => [sx(pt[0]), sy(pt[1])];
+
+function tracePoly(pts) {
+  const [fx, fy] = spt(pts[0]);
+  ctx.beginPath();
+  ctx.moveTo(fx, fy);
+  for (let i = 1; i < pts.length; i++) {
+    const [x, y] = spt(pts[i]);
+    ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+// ─── Draw routines ────────────────────────────────────────────────────────────
+function drawSea(region) {
+  tracePoly(region.pts);
+  ctx.fillStyle = '#7bbdd4';
+  ctx.fill();
+
+  // Subtle wave pattern, clipped to polygon
+  ctx.save();
+  tracePoly(region.pts);
+  ctx.clip();
+
+  const mapped = region.pts.map(spt);
+  const minY = Math.min(...mapped.map(p => p[1]));
+  const maxY = Math.max(...mapped.map(p => p[1]));
+  const minX = Math.min(...mapped.map(p => p[0]));
+  const maxX = Math.max(...mapped.map(p => p[0])) + 22;
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.20)';
+  ctx.lineWidth = 1;
+  const gap = 22;
+  for (let wy = minY + gap * 0.7; wy < maxY; wy += gap) {
+    ctx.beginPath();
+    for (let wx = minX; wx < maxX; wx += 22) {
+      ctx.moveTo(wx, wy);
+      ctx.bezierCurveTo(wx + 5.5, wy - 5, wx + 11, wy + 5, wx + 22, wy);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Sea border
+  tracePoly(region.pts);
+  ctx.strokeStyle = '#4e8aa0';
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+function drawLand(region) {
+  tracePoly(region.pts);
+  ctx.fillStyle = region.owner === null
+    ? NEUTRAL_COLOR
+    : FACTION_COLORS[region.owner];
+  ctx.fill();
+
+  // Coastal land gets a faint blue tint near the sea
+  if (region.coastal) {
+    tracePoly(region.pts);
+    ctx.fillStyle = 'rgba(80, 140, 170, 0.09)';
+    ctx.fill();
+  }
+
+  // Dark hand-drawn-style border
+  tracePoly(region.pts);
+  ctx.strokeStyle = '#352210';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+// ─── Main render ──────────────────────────────────────────────────────────────
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Deep parchment background (shows through any hairline gaps)
+  ctx.fillStyle = '#2a1e0a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (const r of seaRegions)  drawSea(r);
+  for (const r of landRegions) drawLand(r);
+}
+
+// ─── Resize handler ───────────────────────────────────────────────────────────
+function resize() {
+  const wrap = document.getElementById('map-wrap');
+  canvas.width  = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  render();
+}
+
+window.addEventListener('resize', resize);
+resize();
+</script>
+</body>
+</html>
