@@ -170,7 +170,7 @@ Tied regions → most castles → most coins → random
 ## 12. Procedural Map Generation
 Every new game generates a unique map according to these rules:
 
-- Total land regions: 20–24 (random)
+- Total land regions: 28–32 (random)
 - Orientation: horizontal (landscape)
 - Number of players: 2–4
 - Player castles placed in opposite corners/edges — no two player castles start adjacent

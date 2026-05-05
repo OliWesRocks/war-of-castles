@@ -12,7 +12,7 @@ targeting CrazyGames.com. Inspired by Compact Conflict.
 - CrazyGames SDK (Iteration 8 only)
 
 ## Core design rules — never break these
-- Map is procedurally generated every new game (20-24 regions)
+- Map is procedurally generated every new game (28-32 regions)
 - Landscape orientation only — mobile users rotate their phone
 - Combat is deterministic: attacker wins if units > defenders, ties are random
 - Economy: castles produce 1 coin + 1 unit/turn; villages produce 2 coins/turn

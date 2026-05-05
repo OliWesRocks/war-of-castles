@@ -169,99 +169,216 @@ const ctx    = canvas.getContext('2d');
 // ─── Logical coordinate space ─────────────────────────────────────────────────
 const LW = 1000, LH = 640;
 
-// ─── Node grid: 6 cols × 6 rows ───────────────────────────────────────────────
-// Shared vertices guarantee that adjacent polygons share exact edge geometry,
-// so there are no gaps or overlaps between regions.
-//
-// Base column x-positions and row y-positions:
-const NX = [0, 183, 374, 579, 724, 1000];
-const NY = [0, 131, 262, 394, 522, 640];
+// ─── Color constants (used by rendering) ─────────────────────────────────────
+const NEUTRAL_COLOR  = '#d4c9a8';
+const FACTION_COLORS = ['#c97b84','#4a7fa5','#8a9a5b','#5fb3a1'];
 
-// Organic offsets for internal nodes — border nodes stay exactly on the edge.
-// Layout: flat array, row-major (index = r*6 + c).
-const OFF = [
-  // r=0  top border — all zero
-  [0,0],[0,0],[0,0],[0,0],[0,0],[0,0],
-  // r=1
-  [0,0],[ 18,-10],[-12, 15],[-16, -8],[ 10,  8],[0,0],
-  // r=2
-  [0,0],[-10,-14],[ 14, 16],[ 12,-10],[ -5,  8],[0,0],
-  // r=3
-  [0,0],[ 10,-12],[-15, 12],[ -8, 10],[ 12, -8],[0,0],
-  // r=4
-  [0,0],[ -8,-10],[  6,-14],[ 10,  8],[ -8,  6],[0,0],
-  // r=5  bottom border — all zero
-  [0,0],[0,0],[0,0],[0,0],[0,0],[0,0],
-];
+// ─── Procedural map generator (jittered Voronoi) ──────────────────────────────
+// Sea regions are ordinary Voronoi cells whose seeds happen to be designated
+// sea before generation runs.  They shape the land exactly like any other cell
+// and act as impassable interior barriers / chokepoints.
 
-// Build node array
-const NODES = OFF.map(([ox, oy], i) => {
-  const r = Math.floor(i / 6), c = i % 6;
-  return [NX[c] + ox, NY[r] + oy];
-});
+const MAP_PAD = 45;
+const LX0 = MAP_PAD,      LY0 = MAP_PAD;
+const LX1 = LW - MAP_PAD, LY1 = LH - MAP_PAD;
 
-const N = (r, c) => NODES[r * 6 + c];
+// Clip convex polygon to the half-plane "closer to a than b".
+function clipCell(poly, a, b) {
+  const mx = (a[0]+b[0])*0.5, my = (a[1]+b[1])*0.5;
+  const nx = b[0]-a[0],       ny = b[1]-a[1];
+  const d  = mx*nx + my*ny;
+  const inside = v => v[0]*nx + v[1]*ny <= d + 1e-9;
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const c = poly[i], n = poly[(i+1) % poly.length];
+    const ci = inside(c), ni = inside(n);
+    if (ci) out.push(c);
+    if (ci !== ni) {
+      const dx=n[0]-c[0], dy=n[1]-c[1], denom=dx*nx+dy*ny;
+      if (Math.abs(denom) > 1e-10) {
+        const t = (d - c[0]*nx - c[1]*ny) / denom;
+        out.push([c[0]+t*dx, c[1]+t*dy]);
+      }
+    }
+  }
+  return out;
+}
 
-// ─── Region definitions ───────────────────────────────────────────────────────
-const NEUTRAL_COLOR = '#d4c9a8'; // uniform parchment for all unowned land
+// Scatter seeds with a minimum separation to avoid degenerate slivers.
+function placeSeeds(count) {
+  const seeds = [], MIN_D2 = 42*42, pad = 25;
+  for (let attempt = 0; seeds.length < count && attempt < 60000; attempt++) {
+    const x = LX0+pad + Math.random()*(LX1-LX0-pad*2);
+    const y = LY0+pad + Math.random()*(LY1-LY0-pad*2);
+    if (!seeds.some(s => (s[0]-x)**2+(s[1]-y)**2 < MIN_D2)) seeds.push([x,y]);
+  }
+  return seeds;
+}
 
-// Vivid faction colors — only shown on owned regions
-const FACTION_COLORS = [
-  '#c97b84', // 0 Merchants — dusty rose
-  '#4a7fa5', // 1 Warriors  — steel blue
-  '#8a9a5b', // 2 Stoics    — olive
-  '#5fb3a1', // 3 Ninjas    — pale teal
-];
+// Build Voronoi cells; return parallel {cells, seeds} with degenerate cells removed.
+function buildVoronoiCells(seeds) {
+  const cells = [], vseeds = [];
+  seeds.forEach((s, i) => {
+    let cell = [[LX0,LY0],[LX1,LY0],[LX1,LY1],[LX0,LY1]];
+    for (let j = 0; j < seeds.length && cell.length >= 3; j++) {
+      if (j !== i) cell = clipCell(cell, s, seeds[j]);
+    }
+    if (cell.length >= 3) { cells.push(cell); vseeds.push(s); }
+  });
+  return { cells, seeds: vseeds };
+}
 
-// One home castle per faction; all other regions start neutral.
-// Key: `${r},${c}` → faction index
-const OWNERS = {
-  '0,0': 0,  // Merchants home castle — NW corner
-  '0,3': 1,  // Warriors  home castle — NE corner (coastal)
-  '4,0': 2,  // Stoics    home castle — SW corner
-  '4,3': 3,  // Ninjas    home castle — SE corner (coastal)
-};
+// Two Voronoi cells share an edge when >= 2 of their vertices coincide.
+function cellsAdjacent(a, b) {
+  let n = 0;
+  for (const va of a) {
+    for (const vb of b) {
+      if ((va[0]-vb[0])**2+(va[1]-vb[1])**2 < 1.0) { if (++n >= 2) return true; }
+    }
+  }
+  return false;
+}
 
-// Region type and starting units — row-major index r*4+c.
-// 4 player castles, 2 neutral castles, 6 villages, 8 empty  (matches GDD).
-// Unit counts: player castle=3, neutral castle=2, village=1, empty=0.
-const TYPES = [
-  'castle','village','empty',  'castle',   // row 0
-  'empty', 'village','empty',  'village',  // row 1
-  'village','castle','castle', 'village',  // row 2
-  'empty', 'village','empty',  'empty',    // row 3
-  'castle','empty',  'village','castle',   // row 4
-];
-const UNIT_COUNTS = [
-  3,1,0,3,
-  0,1,0,1,
-  1,2,2,1,
-  0,1,0,0,
-  3,0,1,3,
-];
-
-// 20 land regions (r = 0..4, c = 0..3)
-const landRegions = [];
-for (let r = 0; r < 5; r++) {
-  for (let c = 0; c < 4; c++) {
-    landRegions.push({
-      pts:     [N(r, c), N(r, c+1), N(r+1, c+1), N(r+1, c)],
-      owner:   OWNERS[`${r},${c}`] ?? null,
-      type:    TYPES[r * 4 + c],
-      units:   UNIT_COUNTS[r * 4 + c],
-      coastal: c === 3,
-    });
+function shuffleArr(arr) {
+  for (let i = arr.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
   }
 }
 
-// 3 sea regions — right strip (logical cols 4-5).
-// The sea polygons include all shared col-4 vertices (N(1,4) and N(4,4)) so
-// that their left boundary matches the land regions' right boundary exactly.
-const seaRegions = [
-  { pts: [N(0,4), N(0,5), N(2,5), N(2,4), N(1,4)] },  // northern sea
-  { pts: [N(2,4), N(2,5), N(3,5), N(3,4)]           },  // mid-sea channel
-  { pts: [N(3,4), N(3,5), N(5,5), N(5,4), N(4,4)] },  // southern sea
-];
+// Split cells into sea/land, assign GDD-compliant types, return both arrays.
+function generateMap(cells, seeds, seaSet) {
+  // Full adjacency table (land + sea cells together)
+  const adj = cells.map(() => []);
+  for (let i = 0; i < cells.length; i++) {
+    for (let j = i+1; j < cells.length; j++) {
+      if (cellsAdjacent(cells[i], cells[j])) { adj[i].push(j); adj[j].push(i); }
+    }
+  }
+
+  // Partition into sea regions and land regions
+  const seaRegions = [], landCells = [], landSeeds = [], landOrig = [];
+  cells.forEach((pts, i) => {
+    if (seaSet.has(i)) {
+      seaRegions.push({ pts });
+    } else {
+      landOrig.push(i);
+      landCells.push(pts);
+      landSeeds.push(seeds[i]);
+    }
+  });
+
+  const NR = landCells.length, used = new Set();
+  const landRegions = landCells.map((pts, li) => ({
+    pts, owner: null, type: 'empty', units: 0,
+    coastal:
+      pts.some(([x,y]) => x <= LX0+2 || x >= LX1-2 || y <= LY0+2 || y >= LY1-2) ||
+      adj[landOrig[li]].some(j => seaSet.has(j)),
+  }));
+
+  // 4 player castles — nearest land seed to each corner
+  [[LX0,LY0],[LX1,LY0],[LX0,LY1],[LX1,LY1]].forEach(([tx,ty], fi) => {
+    let best=-1, bd=Infinity;
+    for (let i=0; i<NR; i++) {
+      if (used.has(i)) continue;
+      const d=(landSeeds[i][0]-tx)**2+(landSeeds[i][1]-ty)**2;
+      if (d<bd) { bd=d; best=i; }
+    }
+    used.add(best);
+    Object.assign(landRegions[best], { owner: fi, type: 'castle', units: 3 });
+  });
+
+  // 2 neutral castles — nearest to map centre
+  const mcx=(LX0+LX1)/2, mcy=(LY0+LY1)/2;
+  [...Array(NR).keys()]
+    .filter(i => !used.has(i))
+    .sort((a,b) =>
+      (landSeeds[a][0]-mcx)**2+(landSeeds[a][1]-mcy)**2 -
+      ((landSeeds[b][0]-mcx)**2+(landSeeds[b][1]-mcy)**2))
+    .slice(0,2)
+    .forEach(i => { used.add(i); Object.assign(landRegions[i], { type: 'castle', units: 2 }); });
+
+  // 6-8 villages spread randomly among the remaining regions
+  const nVil = 6 + Math.floor(Math.random()*3);
+  const pool = [...Array(NR).keys()].filter(i => !used.has(i));
+  shuffleArr(pool);
+  pool.slice(0, nVil)
+    .forEach(i => { used.add(i); Object.assign(landRegions[i], { type: 'village', units: 1 }); });
+
+  return { landRegions, seaRegions };
+}
+
+// ─── Generate map ─────────────────────────────────────────────────────────────
+const _nLand = 28 + Math.floor(Math.random()*5);  // 28-32 land regions
+const _nSea  = 2  + Math.floor(Math.random()*3);  // 2-4 sea corridors
+
+const _landSeeds = placeSeeds(_nLand);
+
+// Generate elongated sea corridors — each a tight line of seeds whose Voronoi
+// cells clip into thin perpendicular slivers, forming a fjord, strait, or river.
+function genSeaCorridors(nSea, landSeeds) {
+  // STEP: along-corridor seed spacing → controls sliver length.
+  // MIN_LAND_D2: sea seeds stay ≥30 px from land → min sea cell half-width = 15 px.
+  // MAX_HALF: reject corridors where land is >52 px away on either perpendicular side,
+  //   keeping max corridor total width at 52 px and worst-case area under 5% of map.
+  const STEP = 22, MIN_LAND_D2 = 30*30, MAX_HALF = 52, MIN_CTR_D2 = 110*110;
+  const CORN_PAD = 155;
+  const corners = [
+    [LX0+CORN_PAD, LY0+CORN_PAD], [LX1-CORN_PAD, LY0+CORN_PAD],
+    [LX0+CORN_PAD, LY1-CORN_PAD], [LX1-CORN_PAD, LY1-CORN_PAD],
+  ];
+  const placed = [], ctrs = [];
+
+  for (let si = 0; si < nSea; si++) {
+    const nPts = 3 + Math.floor(Math.random()*3);  // 3-5 seeds per corridor
+    let pts = null;
+
+    for (let att = 0; att < 2000 && !pts; att++) {
+      const cx = LX0+100 + Math.random()*(LX1-LX0-200);
+      const cy = LY0+90  + Math.random()*(LY1-LY0-180);
+      if (corners.some(([kx,ky]) => (cx-kx)**2+(cy-ky)**2 < CORN_PAD*CORN_PAD)) continue;
+      if (ctrs.some(([ox,oy]) => (cx-ox)**2+(cy-oy)**2 < MIN_CTR_D2)) continue;
+      const ang = Math.random()*Math.PI;
+      const cos = Math.cos(ang), sin = Math.sin(ang);
+      const half = (nPts-1)/2;
+      const cands = Array.from({length:nPts}, (_,i) => [
+        cx + (i-half)*STEP*cos,
+        cy + (i-half)*STEP*sin,
+      ]);
+      if (!cands.every(([x,y]) => x > LX0+25 && x < LX1-25 && y > LY0+25 && y < LY1-25)) continue;
+      const existing = [...landSeeds, ...placed];
+      if (cands.some(p => existing.some(s => (s[0]-p[0])**2+(s[1]-p[1])**2 < MIN_LAND_D2))) continue;
+      // Accept only if land seeds flank the corridor within MAX_HALF on both sides,
+      // so the corridor sits in a tight gap rather than open space.
+      const px = -sin, py = cos;
+      const reach = half * STEP + STEP;
+      let minL = Infinity, minR = Infinity;
+      for (const s of landSeeds) {
+        const dx = s[0]-cx, dy = s[1]-cy;
+        if (Math.abs(dx*cos + dy*sin) > reach) continue;
+        const perp = dx*px + dy*py;
+        if (perp > 0) minL = Math.min(minL, perp);
+        else          minR = Math.min(minR, -perp);
+      }
+      if (minL > MAX_HALF || minR > MAX_HALF) continue;
+      pts = cands;
+      ctrs.push([cx, cy]);
+    }
+    if (pts) placed.push(...pts);
+  }
+  return placed;
+}
+
+const _seaSeeds = genSeaCorridors(_nSea, _landSeeds);
+const _allSeeds = [..._landSeeds, ..._seaSeeds];
+const { cells: _cells, seeds: _seeds } = buildVoronoiCells(_allSeeds);
+
+const _seaKeySet = new Set(_seaSeeds.map(([x,y]) => `${x},${y}`));
+const _seaSet    = new Set(
+  _seeds.reduce((acc,[x,y],i) => { if (_seaKeySet.has(`${x},${y}`)) acc.push(i); return acc; }, [])
+);
+
+const { landRegions, seaRegions } = generateMap(_cells, _seeds, _seaSet);
 
 // ─── Scale helpers ────────────────────────────────────────────────────────────
 const sx  = x  => x * canvas.width  / LW;
@@ -449,6 +566,19 @@ function resize() {
 
 window.addEventListener('resize', resize);
 resize();
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+function updateSidebar() {
+  const counts = [0, 0, 0, 0];
+  for (const r of landRegions) {
+    if (r.owner !== null) counts[r.owner]++;
+  }
+  document.querySelectorAll('.faction-row').forEach((row, i) => {
+    row.querySelector('.f-meta').textContent = counts[i] + ' rgn';
+  });
+}
+
+updateSidebar();
 </script>
 </body>
 </html>
