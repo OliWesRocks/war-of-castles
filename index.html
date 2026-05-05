@@ -68,6 +68,33 @@
     }
     .event-empty { color: #3a2810; font-size: 11px; font-style: italic; }
 
+    /* ── Income flash ── */
+    #income-flash {
+      color: #8fbe70;
+      font-size: 11px;
+      text-align: center;
+      padding: 4px 0 8px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Recruitment panel ── */
+    #recruit-panel { margin-bottom: 0; }
+    #recruit-btn {
+      width: 100%;
+      padding: 9px;
+      background: #1e3a18;
+      color: #8fbe70;
+      border: 1px solid #3a6828;
+      border-radius: 3px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    #recruit-btn:hover:not(:disabled) { background: #2a5020; }
+    #recruit-btn:disabled { opacity: 0.35; cursor: default; }
+
     /* ── Canvas wrap ── */
     #map-wrap { flex: 1; position: relative; overflow: hidden; }
     canvas { display: block; width: 100%; height: 100%; }
@@ -87,6 +114,46 @@
       #app { display: none; }
       #rotate-prompt { display: flex; }
     }
+
+    /* ── End Turn button ── */
+    #end-turn-btn {
+      margin-top: auto;
+      width: 100%;
+      padding: 10px;
+      background: #3a2810;
+      color: #c9a84c;
+      border: 1px solid #6a4820;
+      border-radius: 3px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    #end-turn-btn:hover { background: #4a3418; }
+
+    /* ── Resume prompt ── */
+    #resume-prompt {
+      display: none;
+      position: fixed; inset: 0; z-index: 60;
+      background: rgba(22, 17, 10, 0.88);
+      align-items: center; justify-content: center;
+    }
+    .resume-box {
+      background: #1e1608; border: 1px solid #3a2810; border-radius: 4px;
+      padding: 30px 36px; text-align: center;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .resume-title { color: #c9a84c; font-size: 15px; text-transform: uppercase; letter-spacing: 2px; }
+    .resume-sub   { color: #7a6040; font-size: 11px; }
+    .resume-btns  { display: flex; gap: 12px; justify-content: center; margin-top: 6px; }
+    .resume-btn {
+      padding: 9px 22px; background: #3a2810; color: #c9a84c;
+      border: 1px solid #6a4820; border-radius: 3px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer;
+    }
+    .resume-btn:hover { background: #4a3418; }
   </style>
 </head>
 <body>
@@ -96,6 +163,17 @@
   <div>Rotate your device to landscape to play</div>
 </div>
 
+<div id="resume-prompt">
+  <div class="resume-box">
+    <div class="resume-title">Saved Game Found</div>
+    <div class="resume-sub">Resume where you left off?</div>
+    <div class="resume-btns">
+      <button class="resume-btn" id="resume-yes">Resume</button>
+      <button class="resume-btn" id="resume-no">New Game</button>
+    </div>
+  </div>
+</div>
+
 <div id="app">
   <aside id="sidebar">
     <div class="game-title">War of Castles</div>
@@ -103,7 +181,7 @@
     <div class="s-section">
       <div class="s-label">Turn</div>
       <div class="turn-row">
-        <span class="turn-num">1</span>
+        <span class="turn-num" id="turn-num">1</span>
         <span class="turn-of">/ 12</span>
       </div>
     </div>
@@ -117,30 +195,32 @@
       </div>
     </div>
 
+    <div id="income-flash" style="display:none"></div>
+
     <hr class="sep">
 
     <div class="s-section">
       <div class="s-label">Factions</div>
       <div class="faction-list">
-        <div class="faction-row">
+        <div class="faction-row" data-faction="0">
           <div class="f-dot" style="background:#c97b84"></div>
           <div class="f-name">Merchants</div>
-          <div class="f-meta">— rgn</div>
+          <div class="f-meta">— rgn · 0c</div>
         </div>
-        <div class="faction-row">
+        <div class="faction-row" data-faction="1">
           <div class="f-dot" style="background:#4a7fa5"></div>
           <div class="f-name">Warriors</div>
-          <div class="f-meta">— rgn</div>
+          <div class="f-meta">— rgn · 0c</div>
         </div>
-        <div class="faction-row">
+        <div class="faction-row" data-faction="2">
           <div class="f-dot" style="background:#8a9a5b"></div>
           <div class="f-name">Stoics</div>
-          <div class="f-meta">— rgn</div>
+          <div class="f-meta">— rgn · 0c</div>
         </div>
-        <div class="faction-row">
+        <div class="faction-row" data-faction="3">
           <div class="f-dot" style="background:#5fb3a1"></div>
           <div class="f-name">Ninjas</div>
-          <div class="f-meta">— rgn</div>
+          <div class="f-meta">— rgn · 0c</div>
         </div>
       </div>
     </div>
@@ -153,6 +233,17 @@
         <span class="event-empty">No event this turn</span>
       </div>
     </div>
+
+    <div id="recruit-panel" style="display:none">
+      <hr class="sep">
+      <div class="s-section">
+        <div class="s-label">Recruit</div>
+        <div id="recruit-info" style="color:#c0a870;font-size:12px;line-height:1.8;margin-bottom:10px"></div>
+        <button id="recruit-btn">Recruit</button>
+      </div>
+    </div>
+
+    <button id="end-turn-btn">End Turn</button>
   </aside>
 
   <div id="map-wrap">
@@ -305,7 +396,14 @@ function generateMap(cells, seeds, seaSet) {
   pool.slice(0, nVil)
     .forEach(i => { used.add(i); Object.assign(landRegions[i], { type: 'village', units: 1 }); });
 
-  return { landRegions, seaRegions };
+  // Build land-to-land adjacency (sea cells excluded)
+  const origToLand = new Map();
+  landOrig.forEach((orig, li) => origToLand.set(orig, li));
+  const landAdj = landCells.map((_, li) =>
+    adj[landOrig[li]].filter(j => origToLand.has(j)).map(j => origToLand.get(j))
+  );
+
+  return { landRegions, seaRegions, landAdj };
 }
 
 // ─── Generate map ─────────────────────────────────────────────────────────────
@@ -378,7 +476,22 @@ const _seaSet    = new Set(
   _seeds.reduce((acc,[x,y],i) => { if (_seaKeySet.has(`${x},${y}`)) acc.push(i); return acc; }, [])
 );
 
-const { landRegions, seaRegions } = generateMap(_cells, _seeds, _seaSet);
+const { landRegions, seaRegions, landAdj } = generateMap(_cells, _seeds, _seaSet);
+
+// ─── Turn / selection state ───────────────────────────────────────────────────
+const MOVES_PER_TURN = 3;
+const MAX_TURNS      = 12;
+let currentTurn    = 1;
+let movesLeft      = MOVES_PER_TURN;
+const movedRegions = new Set();   // land-region indices that have already moved this turn
+let selectedRegion  = null;        // land-region index owned by player 0, or null
+let combatBlocked      = false;     // true while any combat animation is playing
+let flashState         = null;      // { idx, lit } during battle flash, else null
+const coins            = [0, 0, 0, 0]; // coin balance per faction index
+const RECRUIT_COSTS    = [2, 4, 7, 11, 16];
+let recruitedThisTurn  = 0;         // units recruited by player 0 this turn
+let recruitCastleIdx   = null;      // region index of open recruit panel, or null
+let incomeFlashTimer   = null;      // setTimeout handle for income summary
 
 // ─── Scale helpers ────────────────────────────────────────────────────────────
 const sx  = x  => x * canvas.width  / LW;
@@ -394,6 +507,283 @@ function tracePoly(pts) {
     ctx.lineTo(x, y);
   }
   ctx.closePath();
+}
+
+// ─── Interaction helpers ──────────────────────────────────────────────────────
+// Ray-casting point-in-polygon test in logical coordinates.
+function pointInPoly(px, py, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const xi = pts[i][0], yi = pts[i][1];
+    const xj = pts[j][0], yj = pts[j][1];
+    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi)
+      inside = !inside;
+  }
+  return inside;
+}
+
+function logicalFromEvent(e) {
+  const rect = canvas.getBoundingClientRect();
+  return [
+    (e.clientX - rect.left) / rect.width  * LW,
+    (e.clientY - rect.top)  / rect.height * LH,
+  ];
+}
+
+function hitLandRegion(lpx, lpy) {
+  for (let i = 0; i < landRegions.length; i++) {
+    if (pointInPoly(lpx, lpy, landRegions[i].pts)) return i;
+  }
+  return -1;
+}
+
+// Flash the contested region 4 times (~640 ms), then call onDone.
+function runCombatFlash(idx, color, onDone) {
+  const STEPS = 8, INTERVAL = 80;
+  let step = 0;
+  function tick() {
+    flashState = { idx, color, lit: step % 2 === 0 };
+    render();
+    step++;
+    if (step < STEPS) setTimeout(tick, INTERVAL);
+    else { flashState = null; onDone(); }
+  }
+  tick();
+}
+
+// Execute a move from fromIdx into toIdx.
+// Own region: units merge. Neutral/enemy: real deterministic combat.
+function executeMove(fromIdx, toIdx) {
+  const from     = landRegions[fromIdx];
+  const to       = landRegions[toIdx];
+  const attacker = from.owner;
+
+  if (to.owner === attacker) {
+    // Moving into own region — merge
+    to.units += from.units;
+    from.units = 0;
+    movedRegions.add(fromIdx);
+    movesLeft--;
+    selectedRegion = null;
+    return;
+  }
+
+  // Faction passives apply to both win condition and casualty calculation
+  const atkStrength = from.units + (attacker === 1 ? 1 : 0);
+  const defStrength = to.units   + (to.owner  === 2 ? 1 : 0);
+
+  function resolveAttackerWins(survivors) {
+    to.owner = attacker;
+    to.units = survivors;
+    from.units = 0;
+    movedRegions.add(fromIdx);
+    movesLeft--;
+    selectedRegion = null;
+  }
+
+  function resolveDefenderWins(defSurvivors) {
+    from.units = 0;
+    to.units = defSurvivors;
+    movedRegions.add(fromIdx);
+    movesLeft--;
+    selectedRegion = null;
+  }
+
+  // Block input for all combat, flash first, then resolve
+  combatBlocked = true;
+  selectedRegion = null;
+  runCombatFlash(toIdx, FACTION_COLORS[attacker], () => {
+    if (atkStrength > defStrength) {
+      const survivors = atkStrength - defStrength;
+      resolveAttackerWins(survivors);
+      render();
+      drawVictoryOverlay(survivors);
+      setTimeout(() => {
+        combatBlocked = false;
+        render();
+        updateSidebar();
+      }, 1000);
+    } else if (defStrength > atkStrength) {
+      const survivors = defStrength - atkStrength;
+      resolveDefenderWins(survivors);
+      render();
+      drawDefeatOverlay(survivors);
+      setTimeout(() => {
+        combatBlocked = false;
+        render();
+        updateSidebar();
+      }, 1000);
+    } else {
+      // Tie — flash already played, now show message then 50/50
+      render();
+      drawTieOverlay();
+      setTimeout(() => {
+        if (Math.random() < 0.5) resolveAttackerWins(1);
+        else                      resolveDefenderWins(1);
+        combatBlocked = false;
+        render();
+        updateSidebar();
+      }, 1500);
+    }
+  });
+}
+
+function drawCombatOverlay(text, color) {
+  const cx = canvas.width  / 2;
+  const cy = canvas.height / 2;
+  const w  = 420, h = 64;
+  ctx.fillStyle = 'rgba(20, 12, 4, 0.72)';
+  ctx.beginPath();
+  ctx.roundRect(cx - w / 2, cy - h / 2, w, h, 10);
+  ctx.fill();
+  ctx.fillStyle    = color;
+  ctx.font         = 'bold 20px Georgia';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, cx, cy);
+}
+
+function drawVictoryOverlay(survivors) {
+  const u = survivors === 1 ? 'unit' : 'units';
+  drawCombatOverlay(`Victory!  ${survivors} ${u} remaining`, '#8fbe70');
+}
+
+function drawDefeatOverlay(survivors) {
+  const u = survivors === 1 ? 'unit' : 'units';
+  drawCombatOverlay(`Defeated!  Defender has ${survivors} ${u} remaining`, '#c97b84');
+}
+
+function drawTieOverlay() {
+  drawCombatOverlay('Evenly matched!  Fate decides…', '#f5e6c8');
+}
+
+// Returns true if the human player can select/activate this land-region index.
+function canSelect(idx) {
+  return landRegions[idx].owner === 0
+      && !movedRegions.has(idx)
+      && movesLeft > 0;
+}
+
+// Every adjacent land region is a valid destination:
+// own region → merge units; neutral or enemy → deterministic combat.
+function isValidMoveTarget(_toIdx) {
+  return true;
+}
+
+// ─── End of turn ──────────────────────────────────────────────────────────────
+// ─── Recruitment panel ───────────────────────────────────────────────────────
+function recruitCost() {
+  return RECRUIT_COSTS[Math.min(recruitedThisTurn, RECRUIT_COSTS.length - 1)];
+}
+
+function openRecruitPanel(idx) {
+  recruitCastleIdx = idx;
+  refreshRecruitPanel();
+}
+
+function closeRecruitPanel() {
+  recruitCastleIdx = null;
+  document.getElementById('recruit-panel').style.display = 'none';
+}
+
+function refreshRecruitPanel() {
+  if (recruitCastleIdx === null) return;
+  const cost = recruitCost();
+  document.getElementById('recruit-panel').style.display = 'block';
+  document.getElementById('recruit-info').innerHTML =
+    `Balance: <strong>${coins[0]}c</strong><br>Next unit costs: <strong>${cost}c</strong>`;
+  const btn = document.getElementById('recruit-btn');
+  btn.textContent = `Recruit (${cost}c)`;
+  btn.disabled = coins[0] < cost;
+}
+
+function endTurn() {
+  let playerCoins = 0, playerUnits = 0;
+
+  // Income and army production for every faction
+  for (let fi = 0; fi < 4; fi++) {
+    const owned    = landRegions.filter(r => r.owner === fi);
+    const castles  = owned.filter(r => r.type === 'castle');
+    const villages = owned.filter(r => r.type === 'village');
+
+    // Coins: +1 per castle, +2 per village, +1 for Merchants (faction 0)
+    const coinGain = castles.length + villages.length * 2 + (fi === 0 ? 1 : 0);
+    coins[fi] += coinGain;
+
+    // Base production: each castle +1 unit
+    for (const c of castles) c.units++;
+
+    // Village bonus: every 2 villages boosts one castle by +1, in region order
+    const bonus = Math.floor(villages.length / 2);
+    let bonusApplied = 0;
+    for (let i = 0; i < bonus && i < castles.length; i++) {
+      castles[i].units++;
+      bonusApplied++;
+    }
+
+    if (fi === 0) {
+      playerCoins = coinGain;
+      playerUnits = castles.length + bonusApplied;
+    }
+  }
+
+  // Reset turn state
+  movedRegions.clear();
+  movesLeft  = MOVES_PER_TURN;
+  selectedRegion = null;
+  recruitedThisTurn = 0;
+  closeRecruitPanel();
+  currentTurn++;
+
+  updateSidebar();
+  render();
+  saveGame();
+
+  // Brief income summary
+  const flash = document.getElementById('income-flash');
+  flash.textContent = `+${playerCoins} coins  ·  +${playerUnits} units`;
+  flash.style.display = 'block';
+  clearTimeout(incomeFlashTimer);
+  incomeFlashTimer = setTimeout(() => { flash.style.display = 'none'; }, 2000);
+}
+
+// ─── Save / load ─────────────────────────────────────────────────────────────
+const SAVE_KEY = 'woc_save';
+
+function saveGame() {
+  const state = {
+    currentTurn,
+    movesLeft,
+    recruitedThisTurn,
+    coins: coins.slice(),
+    movedRegions: [...movedRegions],
+    landRegions: landRegions.map(r => ({
+      pts: r.pts, owner: r.owner, type: r.type, units: r.units, coastal: r.coastal,
+    })),
+    seaRegions:  seaRegions.map(r => ({ pts: r.pts })),
+    landAdj:     landAdj.map(a => a.slice()),
+  };
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (_) {}
+}
+
+function loadGame(state) {
+  landRegions.length = 0;
+  for (const r of state.landRegions) landRegions.push(r);
+
+  seaRegions.length = 0;
+  for (const r of state.seaRegions) seaRegions.push(r);
+
+  landAdj.length = 0;
+  for (const a of state.landAdj) landAdj.push(a);
+
+  currentTurn       = state.currentTurn;
+  movesLeft         = state.movesLeft;
+  recruitedThisTurn = state.recruitedThisTurn ?? 0;
+  state.coins.forEach((v, i) => { coins[i] = v; });
+  movedRegions.clear();
+  for (const i of state.movedRegions) movedRegions.add(i);
+  selectedRegion = null;
+  closeRecruitPanel();
 }
 
 // ─── Icon helpers ─────────────────────────────────────────────────────────────
@@ -554,12 +944,50 @@ function render() {
 
   for (const r of landRegions) drawLand(r);
   for (const r of seaRegions)  drawSea(r);
+
+  // Uniform land borders drawn last so they're crisp and consistent
+  ctx.lineJoin = 'round';
   for (const r of landRegions) {
     tracePoly(r.pts);
     ctx.strokeStyle = '#352210';
     ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
     ctx.stroke();
+  }
+
+  // ── Dim regions that have already moved this turn ────────────────────────
+  ctx.lineJoin = 'round';
+  for (const mi of movedRegions) {
+    tracePoly(landRegions[mi].pts);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
+    ctx.fill();
+  }
+
+  // ── Selection highlights ──────────────────────────────────────────────────
+  if (selectedRegion !== null) {
+    ctx.lineJoin = 'round';
+
+    // Valid move targets — warm parchment tint overlay
+    for (const ni of landAdj[selectedRegion]) {
+      if (!isValidMoveTarget(ni)) continue;
+      tracePoly(landRegions[ni].pts);
+      ctx.fillStyle = 'rgba(232, 216, 154, 0.50)';
+      ctx.fill();
+    }
+
+    // Selected region — warm off-white border
+    tracePoly(landRegions[selectedRegion].pts);
+    ctx.strokeStyle = '#f5e6c8';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+
+  // ── Battle flash ─────────────────────────────────────────────────────────
+  if (flashState !== null && flashState.lit) {
+    tracePoly(landRegions[flashState.idx].pts);
+    ctx.globalAlpha = 0.60;
+    ctx.fillStyle = flashState.color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -580,12 +1008,96 @@ function updateSidebar() {
   for (const r of landRegions) {
     if (r.owner !== null) counts[r.owner]++;
   }
-  document.querySelectorAll('.faction-row').forEach((row, i) => {
-    row.querySelector('.f-meta').textContent = counts[i] + ' rgn';
+  document.querySelectorAll('.faction-row[data-faction]').forEach(row => {
+    const fi = Number(row.dataset.faction);
+    row.querySelector('.f-meta').textContent = `${counts[fi]} rgn · ${coins[fi]}c`;
   });
+  document.querySelectorAll('.pip').forEach((pip, i) => {
+    pip.classList.toggle('used', i >= movesLeft);
+  });
+  document.getElementById('turn-num').textContent = currentTurn;
 }
 
 updateSidebar();
+
+// ─── Resume prompt ────────────────────────────────────────────────────────────
+(function checkSave() {
+  let raw;
+  try { raw = localStorage.getItem(SAVE_KEY); } catch (_) {}
+  if (!raw) return;
+
+  const prompt = document.getElementById('resume-prompt');
+  prompt.style.display = 'flex';
+
+  document.getElementById('resume-yes').addEventListener('click', () => {
+    try {
+      loadGame(JSON.parse(raw));
+    } catch (_) {
+      localStorage.removeItem(SAVE_KEY);
+    }
+    prompt.style.display = 'none';
+    updateSidebar();
+    render();
+  });
+
+  document.getElementById('resume-no').addEventListener('click', () => {
+    localStorage.removeItem(SAVE_KEY);
+    prompt.style.display = 'none';
+  });
+}());
+
+// ─── Canvas interaction ───────────────────────────────────────────────────────
+canvas.addEventListener('click', e => {
+  if (combatBlocked) return;
+  const [lpx, lpy] = logicalFromEvent(e);
+  const hit = hitLandRegion(lpx, lpy);
+
+  if (selectedRegion !== null && hit !== -1 && landAdj[selectedRegion].includes(hit) && isValidMoveTarget(hit)) {
+    // Moving into adjacent region — close panel, execute move
+    closeRecruitPanel();
+    executeMove(selectedRegion, hit);
+  } else {
+    const isOwnCastle = hit !== -1 && landRegions[hit].owner === 0 && landRegions[hit].type === 'castle';
+    if (isOwnCastle) {
+      // Own castle — open recruit panel and select for movement
+      openRecruitPanel(hit);
+      selectedRegion = hit;
+    } else if (hit !== -1 && canSelect(hit)) {
+      // Own non-castle region — close panel, select for movement
+      closeRecruitPanel();
+      selectedRegion = hit;
+    } else {
+      // Anything else — close panel, deselect
+      closeRecruitPanel();
+      selectedRegion = null;
+    }
+  }
+
+  render();
+  updateSidebar();
+});
+
+document.getElementById('end-turn-btn').addEventListener('click', () => { if (!combatBlocked) endTurn(); });
+
+document.getElementById('recruit-btn').addEventListener('click', () => {
+  if (recruitCastleIdx === null || combatBlocked) return;
+  const cost = recruitCost();
+  if (coins[0] < cost) return;
+  coins[0] -= cost;
+  landRegions[recruitCastleIdx].units++;
+  recruitedThisTurn++;
+  refreshRecruitPanel();
+  updateSidebar();
+  render();
+});
+
+canvas.addEventListener('mousemove', e => {
+  const [lpx, lpy] = logicalFromEvent(e);
+  const hit = hitLandRegion(lpx, lpy);
+  const isSelectable  = hit !== -1 && canSelect(hit);
+  const isValidTarget = hit !== -1 && selectedRegion !== null && landAdj[selectedRegion].includes(hit) && isValidMoveTarget(hit);
+  canvas.style.cursor = (isSelectable || isValidTarget) ? 'pointer' : 'default';
+});
 </script>
 </body>
 </html>
