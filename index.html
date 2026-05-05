@@ -507,10 +507,10 @@ function drawSea(region) {
   }
   ctx.restore();
 
-  // Sea border
+  // Seal hairline gaps at cell boundaries with a sea-coloured stroke
   tracePoly(region.pts);
-  ctx.strokeStyle = '#4e8aa0';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#7bbdd4';
+  ctx.lineWidth = 3;
   ctx.lineJoin = 'round';
   ctx.stroke();
 }
@@ -552,8 +552,15 @@ function render() {
   ctx.fillStyle = '#2a1e0a';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  for (const r of seaRegions)  drawSea(r);
   for (const r of landRegions) drawLand(r);
+  for (const r of seaRegions)  drawSea(r);
+  for (const r of landRegions) {
+    tracePoly(r.pts);
+    ctx.strokeStyle = '#352210';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
 }
 
 // ─── Resize handler ───────────────────────────────────────────────────────────
