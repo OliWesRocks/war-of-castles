@@ -23,7 +23,7 @@
     }
     .game-title {
       color: #c9a84c;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: bold;
       text-transform: uppercase;
       letter-spacing: 2px;
@@ -33,7 +33,7 @@
       margin-bottom: 16px;
     }
     .s-label {
-      font-size: 9px;
+      font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 1.5px;
       color: #6a5030;
@@ -43,8 +43,8 @@
     .sep { border: none; border-top: 1px solid #261a08; margin: 0 0 16px; }
 
     .turn-row { display: flex; align-items: baseline; gap: 6px; }
-    .turn-num { color: #e8d090; font-size: 34px; line-height: 1; }
-    .turn-of  { color: #6a5030; font-size: 14px; }
+    .turn-num { color: #e8d090; font-size: 35px; line-height: 1; }
+    .turn-of  { color: #6a5030; font-size: 15px; }
 
     .pips { display: flex; gap: 7px; margin-top: 8px; }
     .pip {
@@ -58,20 +58,49 @@
     .f-dot {
       width: 11px; height: 11px; border-radius: 2px; flex-shrink: 0;
     }
-    .f-name { color: #c0a870; font-size: 13px; flex: 1; }
-    .f-meta { color: #6a5030; font-size: 11px; }
+    .f-name { color: #c0a870; font-size: 14px; flex: 1; }
+    .f-meta { color: #6a5030; font-size: 12px; }
 
     .event-box {
       border: 1px dashed #2a1e0a; border-radius: 3px;
       padding: 10px; min-height: 52px;
-      display: flex; align-items: center; justify-content: center;
+      display: flex; flex-direction: column; gap: 6px;
+      align-items: flex-start; justify-content: center;
     }
-    .event-empty { color: #3a2810; font-size: 11px; font-style: italic; }
+    .event-empty { color: #3a2810; font-size: 12px; font-style: italic; align-self: center; }
+    .event-box-header { display: flex; align-items: center; gap: 7px; }
+    .event-box-desc { color: #6a5030; font-size: 11px; font-style: italic; line-height: 1.5; }
+
+    /* ── Event card overlay ── */
+    #event-card {
+      display: none;
+      position: fixed; inset: 0; z-index: 80;
+      pointer-events: none;
+      align-items: center; justify-content: center;
+      background: rgba(22, 17, 10, 0.55);
+    }
+    .event-card-inner {
+      background: #1a1206;
+      border: 2px solid #7a5a1a;
+      border-radius: 8px;
+      padding: 32px 56px;
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      box-shadow: 0 0 80px rgba(0, 0, 0, 0.8);
+      animation: eventCardIn 0.35s ease-out;
+    }
+    .event-card-emoji { font-size: 56px; line-height: 1; }
+    .event-card-label { color: #6a5030; font-size: 9px; letter-spacing: 3px; text-transform: uppercase; }
+    .event-card-name  { color: #e8d090; font-size: 26px; letter-spacing: 1px; }
+    @keyframes eventCardIn {
+      from { opacity: 0; transform: scale(0.85); }
+      to   { opacity: 1; transform: scale(1); }
+    }
 
     /* ── Income flash ── */
     #income-flash {
       color: #8fbe70;
-      font-size: 11px;
+      font-size: 12px;
       text-align: center;
       padding: 4px 0 8px;
       letter-spacing: 0.5px;
@@ -87,7 +116,7 @@
       border: 1px solid #3a6828;
       border-radius: 3px;
       font-family: Georgia, 'Times New Roman', serif;
-      font-size: 12px;
+      font-size: 13px;
       letter-spacing: 1px;
       text-transform: uppercase;
       cursor: pointer;
@@ -125,7 +154,7 @@
       border: 1px solid #6a4820;
       border-radius: 3px;
       font-family: Georgia, 'Times New Roman', serif;
-      font-size: 12px;
+      font-size: 13px;
       letter-spacing: 1.5px;
       text-transform: uppercase;
       cursor: pointer;
@@ -171,6 +200,14 @@
       <button class="resume-btn" id="resume-yes">Resume</button>
       <button class="resume-btn" id="resume-no">New Game</button>
     </div>
+  </div>
+</div>
+
+<div id="event-card">
+  <div class="event-card-inner">
+    <div class="event-card-emoji"></div>
+    <div class="event-card-label">World Event</div>
+    <div class="event-card-name"></div>
   </div>
 </div>
 
@@ -238,7 +275,7 @@
       <hr class="sep">
       <div class="s-section">
         <div class="s-label">Recruit</div>
-        <div id="recruit-info" style="color:#c0a870;font-size:12px;line-height:1.8;margin-bottom:10px"></div>
+        <div id="recruit-info" style="color:#c0a870;font-size:13px;line-height:1.8;margin-bottom:10px"></div>
         <button id="recruit-btn">Recruit</button>
       </div>
     </div>
@@ -362,9 +399,9 @@ function generateMap(cells, seeds, seaSet) {
   const NR = landCells.length, used = new Set();
   const landRegions = landCells.map((pts, li) => ({
     pts, owner: null, type: 'empty', units: 0,
-    coastal:
-      pts.some(([x,y]) => x <= LX0+2 || x >= LX1-2 || y <= LY0+2 || y >= LY1-2) ||
-      adj[landOrig[li]].some(j => seaSet.has(j)),
+    coastal: adj[landOrig[li]].some(j => seaSet.has(j)),
+    floodTurnsRemaining: 0,
+    wildfire: false,
   }));
 
   // 4 player castles — nearest land seed to each corner
@@ -493,6 +530,18 @@ let recruitedThisTurn  = 0;         // units recruited by player 0 this turn
 let recruitCastleIdx   = null;      // region index of open recruit panel, or null
 let incomeFlashTimer   = null;      // setTimeout handle for income summary
 
+// ─── World Event System ───────────────────────────────────────────────────────
+const WORLD_EVENTS = [
+  { id: 'flood',       emoji: '🌊', name: 'Flood',        desc: 'The waters rise without warning. One coastal region is swallowed by the sea: impassable for two turns, its villages unproductive.' },
+  { id: 'wildfire',    emoji: '🔥', name: 'Wildfire',     desc: 'Fire sweeps through the land. One region is impassable and yields no coin. Any army caught inside loses half its forces.' },
+  { id: 'richHarvest', emoji: '🌾', name: 'Rich Harvest', desc: 'The fields overflow with plenty. Armies march with full bellies and fight with greater fury. All attackers gain one extra unit in battle this turn.' },
+  { id: 'sunnyDays',   emoji: '☀️', name: 'Sunny Days',   desc: 'A rare moment of peace. The land is calm, the skies are clear. No event troubles the realm this turn.' },
+];
+let currentEvent = null;   // active WORLD_EVENTS entry, or null
+let lastEventId  = null;   // id of previous round's event (prevents repeats)
+let richHarvest    = false;  // true when Rich Harvest is the active event
+let wildfireOverlay = null;  // text string while the "X units lost" banner is showing
+
 // ─── Scale helpers ────────────────────────────────────────────────────────────
 const sx  = x  => x * canvas.width  / LW;
 const sy  = y  => y * canvas.height / LH;
@@ -568,8 +617,8 @@ function executeMove(fromIdx, toIdx) {
     return;
   }
 
-  // Faction passives apply to both win condition and casualty calculation
-  const atkStrength = from.units + (attacker === 1 ? 1 : 0);
+  // Faction passives + Rich Harvest event apply to attack strength
+  const atkStrength = from.units + (attacker === 1 ? 1 : 0) + (richHarvest ? 1 : 0);
   const defStrength = to.units   + (to.owner  === 2 ? 1 : 0);
 
   function resolveAttackerWins(survivors) {
@@ -659,15 +708,18 @@ function drawTieOverlay() {
 
 // Returns true if the human player can select/activate this land-region index.
 function canSelect(idx) {
-  return landRegions[idx].owner === 0
+  const r = landRegions[idx];
+  return r.owner === 0
       && !movedRegions.has(idx)
-      && movesLeft > 0;
+      && movesLeft > 0
+      && !(r.floodTurnsRemaining > 0)
+      && !r.wildfire;
 }
 
-// Every adjacent land region is a valid destination:
-// own region → merge units; neutral or enemy → deterministic combat.
-function isValidMoveTarget(_toIdx) {
-  return true;
+// Flooded and burning regions are impassable — nothing can move in or out.
+function isValidMoveTarget(toIdx) {
+  const r = landRegions[toIdx];
+  return !(r.floodTurnsRemaining > 0) && !r.wildfire;
 }
 
 // ─── End of turn ──────────────────────────────────────────────────────────────
@@ -698,6 +750,7 @@ function refreshRecruitPanel() {
 }
 
 function endTurn() {
+  richHarvest = false;
   let playerCoins = 0, playerUnits = 0;
 
   // Income and army production for every faction
@@ -706,8 +759,9 @@ function endTurn() {
     const castles  = owned.filter(r => r.type === 'castle');
     const villages = owned.filter(r => r.type === 'village');
 
-    // Coins: +1 per castle, +2 per village, +1 for Merchants (faction 0)
-    const coinGain = castles.length + villages.length * 2 + (fi === 0 ? 1 : 0);
+    // Coins: +1 per castle, +2 per village not under flood or wildfire, +1 for Merchants
+    const activeVillages = villages.filter(r => !(r.floodTurnsRemaining > 0) && !r.wildfire);
+    const coinGain = castles.length + activeVillages.length * 2 + (fi === 0 ? 1 : 0);
     coins[fi] += coinGain;
 
     // Base production: each castle +1 unit
@@ -727,6 +781,12 @@ function endTurn() {
     }
   }
 
+  // Tick flood countdown; clear wildfire (lasts exactly 1 round)
+  for (const r of landRegions) {
+    if (r.floodTurnsRemaining > 0) r.floodTurnsRemaining--;
+    r.wildfire = false;
+  }
+
   // Reset turn state
   movedRegions.clear();
   movesLeft  = MOVES_PER_TURN;
@@ -735,6 +795,7 @@ function endTurn() {
   closeRecruitPanel();
   currentTurn++;
 
+  drawWorldEvent();
   updateSidebar();
   render();
   saveGame();
@@ -757,8 +818,13 @@ function saveGame() {
     recruitedThisTurn,
     coins: coins.slice(),
     movedRegions: [...movedRegions],
+    currentEvent,
+    lastEventId,
+    richHarvest,
     landRegions: landRegions.map(r => ({
       pts: r.pts, owner: r.owner, type: r.type, units: r.units, coastal: r.coastal,
+      floodTurnsRemaining: r.floodTurnsRemaining ?? 0,
+      wildfire: r.wildfire ?? false,
     })),
     seaRegions:  seaRegions.map(r => ({ pts: r.pts })),
     landAdj:     landAdj.map(a => a.slice()),
@@ -782,6 +848,9 @@ function loadGame(state) {
   state.coins.forEach((v, i) => { coins[i] = v; });
   movedRegions.clear();
   for (const i of state.movedRegions) movedRegions.add(i);
+  currentEvent = state.currentEvent ?? null;
+  lastEventId  = state.lastEventId  ?? null;
+  richHarvest  = state.richHarvest  ?? false;
   selectedRegion = null;
   closeRecruitPanel();
 }
@@ -962,6 +1031,39 @@ function render() {
     ctx.fill();
   }
 
+  // ── Flood overlay ─────────────────────────────────────────────────────────
+  for (let i = 0; i < landRegions.length; i++) {
+    const r = landRegions[i];
+    if (!(r.floodTurnsRemaining > 0)) continue;
+    tracePoly(r.pts);
+    ctx.fillStyle = 'rgba(40, 110, 200, 0.42)';
+    ctx.fill();
+    const [fcx, fcy] = centroid(r.pts);
+    ctx.font = '20px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🌊', fcx, fcy);
+  }
+
+  // ── Wildfire overlay ──────────────────────────────────────────────────────
+  for (let i = 0; i < landRegions.length; i++) {
+    const r = landRegions[i];
+    if (!r.wildfire) continue;
+    tracePoly(r.pts);
+    ctx.fillStyle = 'rgba(210, 90, 10, 0.42)';
+    ctx.fill();
+    const [wcx, wcy] = centroid(r.pts);
+    ctx.font = '20px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🔥', wcx, wcy);
+  }
+
+  // ── Wildfire unit-loss banner ─────────────────────────────────────────────
+  if (wildfireOverlay !== null) {
+    drawCombatOverlay(wildfireOverlay, '#e8882a');
+  }
+
   // ── Selection highlights ──────────────────────────────────────────────────
   if (selectedRegion !== null) {
     ctx.lineJoin = 'round';
@@ -1002,6 +1104,82 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+// ─── World event helpers ──────────────────────────────────────────────────────
+function updateEventSidebar() {
+  const box = document.querySelector('.event-box');
+  if (!currentEvent) {
+    box.innerHTML = '<span class="event-empty">No event this turn</span>';
+    return;
+  }
+  box.innerHTML =
+    `<div class="event-box-header">` +
+      `<span style="font-size:21px">${currentEvent.emoji}</span>` +
+      `<span style="color:#c0a870;font-size:13px">${currentEvent.name}</span>` +
+    `</div>` +
+    `<div class="event-box-desc">${currentEvent.desc}</div>`;
+}
+
+function showEventCard(event) {
+  const card = document.getElementById('event-card');
+  card.querySelector('.event-card-emoji').textContent = event.emoji;
+  card.querySelector('.event-card-name').textContent  = event.name;
+  card.style.display = 'flex';
+  setTimeout(() => { card.style.display = 'none'; }, 2000);
+}
+
+function applyFloodEvent() {
+  const coastalIdxs = landRegions.reduce((acc, r, i) => { if (r.coastal) acc.push(i); return acc; }, []);
+  if (coastalIdxs.length === 0) return;
+  const idx = coastalIdxs[Math.floor(Math.random() * coastalIdxs.length)];
+  landRegions[idx].floodTurnsRemaining = 2;
+}
+
+// Returns the number of units killed (0 when a neutral region is targeted).
+function applyWildfireEvent() {
+  const neutral  = landRegions.reduce((a, r, i) => { if (r.owner === null && !r.wildfire) a.push(i); return a; }, []);
+  const occupied = landRegions.reduce((a, r, i) => { if (r.owner !== null && !r.wildfire) a.push(i); return a; }, []);
+
+  if (neutral.length > 0) {
+    const idx = neutral[Math.floor(Math.random() * neutral.length)];
+    landRegions[idx].wildfire = true;
+    landRegions[idx].units = 0;
+    return 0;
+  }
+
+  if (occupied.length === 0) return 0;   // nowhere to burn (shouldn't happen)
+
+  const idx = occupied[Math.floor(Math.random() * occupied.length)];
+  const r   = landRegions[idx];
+  r.wildfire  = true;
+  const lost  = Math.floor(r.units / 2);
+  r.units     = Math.max(r.units - lost, 1);
+  return lost;
+}
+
+function drawWorldEvent() {
+  const pool  = WORLD_EVENTS.filter(e => e.id !== lastEventId);
+  const event = pool[Math.floor(Math.random() * pool.length)];
+  lastEventId  = event.id;
+  currentEvent = event;
+  richHarvest  = event.id === 'richHarvest';
+  if (event.id === 'flood') applyFloodEvent();
+
+  let wildfireLost = 0;
+  if (event.id === 'wildfire') wildfireLost = applyWildfireEvent();
+
+  updateEventSidebar();
+  showEventCard(event);
+
+  if (wildfireLost > 0) {
+    const u = wildfireLost === 1 ? 'unit' : 'units';
+    setTimeout(() => {
+      wildfireOverlay = `Wildfire!  ${wildfireLost} ${u} lost to the flames`;
+      render();
+      setTimeout(() => { wildfireOverlay = null; render(); }, 2000);
+    }, 2200);
+  }
+}
+
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 function updateSidebar() {
   const counts = [0, 0, 0, 0];
@@ -1024,7 +1202,7 @@ updateSidebar();
 (function checkSave() {
   let raw;
   try { raw = localStorage.getItem(SAVE_KEY); } catch (_) {}
-  if (!raw) return;
+  if (!raw) { drawWorldEvent(); render(); return; }
 
   const prompt = document.getElementById('resume-prompt');
   prompt.style.display = 'flex';
@@ -1037,12 +1215,15 @@ updateSidebar();
     }
     prompt.style.display = 'none';
     updateSidebar();
+    updateEventSidebar();
     render();
   });
 
   document.getElementById('resume-no').addEventListener('click', () => {
     localStorage.removeItem(SAVE_KEY);
     prompt.style.display = 'none';
+    drawWorldEvent();
+    render();
   });
 }());
 
