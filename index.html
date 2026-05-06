@@ -128,6 +128,34 @@
     #map-wrap { flex: 1; position: relative; overflow: hidden; }
     canvas { display: block; width: 100%; height: 100%; }
 
+    /* ── Army split stepper ── */
+    #split-stepper {
+      display: none;
+      position: absolute;
+      background: #1a1206;
+      border: 1px solid #6a4820;
+      border-radius: 4px;
+      padding: 5px 8px;
+      gap: 8px;
+      align-items: center;
+      z-index: 50;
+      transform: translate(-50%, -100%);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.7);
+      user-select: none;
+      pointer-events: all;
+    }
+    .split-btn {
+      width: 22px; height: 22px;
+      background: #3a2810; color: #c9a84c;
+      border: 1px solid #6a4820; border-radius: 2px;
+      cursor: pointer; font-size: 17px;
+      font-family: Georgia, 'Times New Roman', serif;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1;
+    }
+    .split-btn:hover { background: #4a3418; }
+    #split-count { color: #e8d090; font-size: 14px; min-width: 18px; text-align: center; font-family: Georgia, 'Times New Roman', serif; }
+
     /* ── Portrait guard ── */
     #rotate-prompt {
       display: none;
@@ -338,6 +366,11 @@
 
   <div id="map-wrap">
     <canvas id="canvas"></canvas>
+    <div id="split-stepper">
+      <button class="split-btn" id="split-minus">−</button>
+      <span id="split-count">1</span>
+      <button class="split-btn" id="split-plus">+</button>
+    </div>
   </div>
 </div>
 
@@ -581,6 +614,7 @@ const movedRegions = new Set();   // land-region indices that have already moved
 let selectedRegion  = null;        // land-region index owned by player 0, or null
 let combatBlocked      = false;     // true while any combat animation is playing
 let flashState         = null;      // { idx, lit } during battle flash, else null
+let splitCount         = 0;         // units committed to next move (set when region is selected)
 const coins            = [0, 0, 0, 0]; // coin balance per faction index
 const eliminated       = [false, false, false, false];
 let gameOver           = false;
@@ -666,16 +700,18 @@ function runCombatFlash(idx, color, onDone) {
 
 // Execute a move from fromIdx into toIdx.  onComplete is called when the move
 // (including any combat animation) has fully resolved; omit for human moves.
-function executeMove(fromIdx, toIdx, onComplete) {
+// commitUnits: how many units to send (defaults to all).  Remaining units stay
+// at the source and may act again this turn.
+function executeMove(fromIdx, toIdx, onComplete, commitUnits) {
   const from     = landRegions[fromIdx];
   const to       = landRegions[toIdx];
   const attacker = from.owner;
+  if (commitUnits === undefined) commitUnits = from.units;
 
   if (to.owner === attacker) {
-    // Moving into own region — merge
-    to.units += from.units;
-    from.units = 0;
-    movedRegions.add(fromIdx);
+    // Moving into own region — merge committed units
+    to.units   += commitUnits;
+    from.units -= commitUnits;
     movesLeft--;
     selectedRegion = null;
     if (onComplete) onComplete();
@@ -684,25 +720,24 @@ function executeMove(fromIdx, toIdx, onComplete) {
 
   // Faction passives + Rich Harvest only apply when there are actual defenders to fight
   const isCombat    = to.units > 0;
-  const atkStrength = from.units
+  const atkStrength = commitUnits
     + (isCombat && attacker === 1 ? 1 : 0)
     + (isCombat && richHarvest    ? 1 : 0);
   const defStrength = to.units
     + (isCombat && to.owner === 2 ? 1 : 0);
 
   function resolveAttackerWins(survivors) {
-    to.owner = attacker;
-    to.units = survivors;
-    from.units = 0;
-    movedRegions.add(fromIdx);
+    to.owner    = attacker;
+    to.units    = survivors;
+    from.units -= commitUnits;
+    movedRegions.add(toIdx);
     movesLeft--;
     selectedRegion = null;
   }
 
   function resolveDefenderWins(defSurvivors) {
-    from.units = 0;
-    to.units = defSurvivors;
-    movedRegions.add(fromIdx);
+    from.units -= commitUnits;
+    to.units    = defSurvivors;
     movesLeft--;
     selectedRegion = null;
   }
@@ -712,28 +747,32 @@ function executeMove(fromIdx, toIdx, onComplete) {
   selectedRegion = null;
   runCombatFlash(toIdx, FACTION_COLORS[attacker], () => {
     if (atkStrength > defStrength) {
-      const survivors = from.units - to.units;
+      const survivors = commitUnits - to.units;
       resolveAttackerWins(survivors);
       render();
       drawVictoryOverlay(survivors);
       setTimeout(() => {
         combatBlocked = false;
-        if (checkEliminations()) { showGameOver(); return; }
-        render();
-        updateSidebar();
-        if (onComplete) onComplete();
+        checkEliminations(shouldEnd => {
+          if (shouldEnd) { showGameOver(); return; }
+          render();
+          updateSidebar();
+          if (onComplete) onComplete();
+        });
       }, 1000);
     } else if (defStrength > atkStrength) {
-      const survivors = to.units - from.units;
+      const survivors = to.units - commitUnits;
       resolveDefenderWins(survivors);
       render();
       drawDefeatOverlay(survivors);
       setTimeout(() => {
         combatBlocked = false;
-        if (checkEliminations()) { showGameOver(); return; }
-        render();
-        updateSidebar();
-        if (onComplete) onComplete();
+        checkEliminations(shouldEnd => {
+          if (shouldEnd) { showGameOver(); return; }
+          render();
+          updateSidebar();
+          if (onComplete) onComplete();
+        });
       }, 1000);
     } else {
       // Tie — flash already played, now show message then 50/50
@@ -743,10 +782,12 @@ function executeMove(fromIdx, toIdx, onComplete) {
         if (Math.random() < 0.5) resolveAttackerWins(1);
         else                      resolveDefenderWins(1);
         combatBlocked = false;
-        if (checkEliminations()) { showGameOver(); return; }
-        render();
-        updateSidebar();
-        if (onComplete) onComplete();
+        checkEliminations(shouldEnd => {
+          if (shouldEnd) { showGameOver(); return; }
+          render();
+          updateSidebar();
+          if (onComplete) onComplete();
+        });
       }, 1500);
     }
   });
@@ -785,6 +826,7 @@ function drawTieOverlay() {
 function canSelect(idx) {
   const r = landRegions[idx];
   return r.owner === 0
+      && r.units > 0
       && !movedRegions.has(idx)
       && movesLeft > 0
       && !(r.floodTurnsRemaining > 0)
@@ -799,10 +841,13 @@ function isValidMoveTarget(toIdx) {
 
 // ─── Elimination & game over ──────────────────────────────────────────────────
 
-// Neutralize all regions of newly eliminated factions.
-// Returns true if the game should end (human eliminated or ≤1 faction alive).
-function checkEliminations() {
-  let changed = false;
+// Neutralize all regions of newly eliminated factions, show an elimination card
+// for each, then call onDone(shouldEnd) — where shouldEnd is true when the game
+// should end (human eliminated or ≤1 faction alive).  onDone is called
+// synchronously when there are no new eliminations, asynchronously (after 2 s)
+// when a card is shown.
+function checkEliminations(onDone) {
+  const newlyElim = [];
   for (let fi = 0; fi < 4; fi++) {
     if (eliminated[fi]) continue;
     const hasArmy   = landRegions.some(r => r.owner === fi && r.units > 0);
@@ -812,12 +857,17 @@ function checkEliminations() {
       for (const r of landRegions) {
         if (r.owner === fi) { r.owner = null; r.units = 0; }
       }
-      changed = true;
+      newlyElim.push(fi);
     }
   }
-  if (changed) { render(); updateSidebar(); }
-  const active = [0, 1, 2, 3].filter(f => !eliminated[f]);
-  return active.length <= 1 || eliminated[HUMAN_FACTION];
+  if (newlyElim.length) { render(); updateSidebar(); }
+  const active    = [0, 1, 2, 3].filter(f => !eliminated[f]);
+  const shouldEnd = active.length <= 1 || eliminated[HUMAN_FACTION];
+  if (newlyElim.length > 0) {
+    showEliminationCard(newlyElim[0], () => { if (onDone) onDone(shouldEnd); });
+  } else {
+    if (onDone) onDone(shouldEnd);
+  }
 }
 
 function determineWinner() {
@@ -930,35 +980,37 @@ function endFactionTurn() {
   closeRecruitPanel();
 
   // Check for eliminations caused by income/production (e.g. castle stolen last turn)
-  if (checkEliminations()) { showGameOver(); return; }
+  checkEliminations(shouldEnd => {
+    if (shouldEnd) { showGameOver(); return; }
 
-  // Find next non-eliminated faction; track if we cross the round boundary (3 → 0)
-  let nextFaction = fi;
-  let roundEnded = false;
-  for (let i = 0; i < 4; i++) {
-    nextFaction = (nextFaction + 1) % 4;
-    if (nextFaction === 0) roundEnded = true;
-    if (!eliminated[nextFaction]) break;
-  }
-
-  if (roundEnded) {
-    for (const r of landRegions) {
-      if (r.floodTurnsRemaining > 0) r.floodTurnsRemaining--;
-      r.wildfire = false;
+    // Find next non-eliminated faction; track if we cross the round boundary (3 → 0)
+    let nextFaction = fi;
+    let roundEnded = false;
+    for (let i = 0; i < 4; i++) {
+      nextFaction = (nextFaction + 1) % 4;
+      if (nextFaction === 0) roundEnded = true;
+      if (!eliminated[nextFaction]) break;
     }
-    currentTurn++;
-    if (currentTurn > MAX_TURNS) { showGameOver(); return; }
-    drawWorldEvent();
-  }
 
-  currentFaction = nextFaction;
-  movesLeft = movesForFaction(currentFaction);
+    if (roundEnded) {
+      for (const r of landRegions) {
+        if (r.floodTurnsRemaining > 0) r.floodTurnsRemaining--;
+        r.wildfire = false;
+      }
+      currentTurn++;
+      if (currentTurn > MAX_TURNS) { showGameOver(); return; }
+      drawWorldEvent();
+    }
 
-  updateSidebar();
-  render();
-  saveGame();
+    currentFaction = nextFaction;
+    movesLeft = movesForFaction(currentFaction);
 
-  if (currentFaction !== HUMAN_FACTION) runAiTurn();
+    updateSidebar();
+    render();
+    saveGame();
+
+    if (currentFaction !== HUMAN_FACTION) runAiTurn();
+  });
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────────────
@@ -1347,6 +1399,7 @@ function resize() {
   canvas.width  = wrap.clientWidth;
   canvas.height = wrap.clientHeight;
   render();
+  positionStepper();
 }
 
 window.addEventListener('resize', resize);
@@ -1370,9 +1423,34 @@ function updateEventSidebar() {
 function showEventCard(event) {
   const card = document.getElementById('event-card');
   card.querySelector('.event-card-emoji').textContent = event.emoji;
+  card.querySelector('.event-card-label').textContent = 'World Event';
   card.querySelector('.event-card-name').textContent  = event.name;
   card.style.display = 'flex';
   setTimeout(() => { card.style.display = 'none'; }, 2000);
+}
+
+function showEliminationCard(fi, onDone) {
+  const card = document.getElementById('event-card');
+  card.querySelector('.event-card-emoji').textContent = '💀';
+  card.querySelector('.event-card-label').textContent = 'Eliminated';
+  card.querySelector('.event-card-name').textContent  = `${FACTION_NAMES[fi]} have fallen`;
+  card.style.display = 'flex';
+  setTimeout(() => { card.style.display = 'none'; if (onDone) onDone(); }, 2000);
+}
+
+// Show or hide/reposition the army-split stepper near the selected region.
+function positionStepper() {
+  const el = document.getElementById('split-stepper');
+  if (selectedRegion === null || landRegions[selectedRegion].units <= 1
+      || combatBlocked || gameOver || currentFaction !== HUMAN_FACTION) {
+    el.style.display = 'none';
+    return;
+  }
+  const [cx, cy] = centroid(landRegions[selectedRegion].pts);
+  el.style.left = `${cx}px`;
+  el.style.top  = `${cy - 10}px`;
+  el.style.display = 'flex';
+  document.getElementById('split-count').textContent = splitCount;
 }
 
 function applyFloodEvent() {
@@ -1513,19 +1591,21 @@ canvas.addEventListener('click', e => {
   const hit = hitLandRegion(lpx, lpy);
 
   if (selectedRegion !== null && hit !== -1 && landAdj[selectedRegion].includes(hit) && isValidMoveTarget(hit)) {
-    // Moving into adjacent region — close panel, execute move
+    // Moving into adjacent region — close panel, execute move with committed split
     closeRecruitPanel();
-    executeMove(selectedRegion, hit);
+    executeMove(selectedRegion, hit, undefined, splitCount);
   } else {
     const isOwnCastle = hit !== -1 && landRegions[hit].owner === 0 && landRegions[hit].type === 'castle';
     if (isOwnCastle) {
       // Own castle — open recruit panel and select for movement
       openRecruitPanel(hit);
       selectedRegion = hit;
+      splitCount = landRegions[hit].units;
     } else if (hit !== -1 && canSelect(hit)) {
       // Own non-castle region — close panel, select for movement
       closeRecruitPanel();
       selectedRegion = hit;
+      splitCount = landRegions[hit].units;
     } else {
       // Anything else — close panel, deselect
       closeRecruitPanel();
@@ -1535,6 +1615,7 @@ canvas.addEventListener('click', e => {
 
   render();
   updateSidebar();
+  positionStepper();
 });
 
 document.getElementById('end-turn-btn').addEventListener('click', () => {
@@ -1551,6 +1632,18 @@ document.getElementById('recruit-btn').addEventListener('click', () => {
   refreshRecruitPanel();
   updateSidebar();
   render();
+});
+
+document.getElementById('split-minus').addEventListener('click', () => {
+  if (selectedRegion === null) return;
+  splitCount = Math.max(1, splitCount - 1);
+  document.getElementById('split-count').textContent = splitCount;
+});
+
+document.getElementById('split-plus').addEventListener('click', () => {
+  if (selectedRegion === null) return;
+  splitCount = Math.min(landRegions[selectedRegion].units, splitCount + 1);
+  document.getElementById('split-count').textContent = splitCount;
 });
 
 canvas.addEventListener('mousemove', e => {
