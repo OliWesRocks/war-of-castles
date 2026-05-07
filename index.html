@@ -380,11 +380,7 @@
 const canvas = document.getElementById('canvas');
 const ctx    = canvas.getContext('2d');
 
-// ─── Water texture ────────────────────────────────────────────────────────────
-let waterPattern = false;
-const _waterImg  = new Image();
-_waterImg.onload = () => { waterPattern = true; render(); };
-_waterImg.src = 'water3.jpg';
+// drawSea uses inline wave drawing — no pattern tile, no seams.
 
 // ─── Land texture ─────────────────────────────────────────────────────────────
 let regionsReady = false;
@@ -399,6 +395,20 @@ const _castleImg = new Image();
 _castleImg.onload  = () => { castleImgReady = true; render(); };
 _castleImg.onerror = () => console.error('Failed to load Castle2.jpg');
 _castleImg.src = 'Castle2.jpg';
+
+// ─── Village image ────────────────────────────────────────────────────────────
+let villageImgReady = false;
+const _villageImg = new Image();
+_villageImg.onload  = () => { villageImgReady = true; render(); };
+_villageImg.onerror = () => console.error('Failed to load Village2.png');
+_villageImg.src = 'Village2.png';
+
+// ─── Army image ───────────────────────────────────────────────────────────────
+let armyImgReady = false;
+const _armyImg = new Image();
+_armyImg.onload  = () => { armyImgReady = true; render(); };
+_armyImg.onerror = () => console.error('Failed to load army2.png');
+_armyImg.src = 'army2.png';
 
 function hexToRgba(hex, alpha) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -1211,34 +1221,53 @@ function drawCastle(cx, cy) {
   }
 }
 
-// Triangle roof on a small rectangle.
 function drawVillage(cx, cy) {
-  const w = 16, bodyH = 10, roofH = 8;
-  const x = cx - w / 2, y = cy - (bodyH + roofH) / 2;
-  ctx.fillStyle = ICON_INK;
-  ctx.fillRect(x, y + roofH, w, bodyH);   // walls
-  ctx.beginPath();
-  ctx.moveTo(cx,      y);           // peak
-  ctx.lineTo(x + w,  y + roofH);   // right eave
-  ctx.lineTo(x,      y + roofH);   // left eave
-  ctx.closePath();
-  ctx.fill();                        // roof
+  const size = 42;
+  if (villageImgReady) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(_villageImg, cx - size / 2, cy - size / 2, size, size);
+    ctx.restore();
+  } else {
+    const w = 16, bodyH = 10, roofH = 8;
+    const x = cx - w / 2, y = cy - (bodyH + roofH) / 2;
+    ctx.fillStyle = ICON_INK;
+    ctx.fillRect(x, y + roofH, w, bodyH);
+    ctx.beginPath();
+    ctx.moveTo(cx,      y);
+    ctx.lineTo(x + w,  y + roofH);
+    ctx.lineTo(x,      y + roofH);
+    ctx.closePath();
+    ctx.fill();
+  }
 }
 
 
-// Up to 5 stacked circles; 6+ shows a number.
+// Up to 5 helmet icons; 6+ shows a number.
 function drawUnits(cx, cy, units) {
   if (units <= 0) return;
   const baseY = cy + 26;
-  ctx.fillStyle = ICON_INK;
   if (units <= 5) {
+    const size = 14;
     const span = (units - 1) * 10;
-    for (let i = 0; i < units; i++) {
-      ctx.beginPath();
-      ctx.arc(cx - span / 2 + i * 10, baseY, 4, 0, Math.PI * 2);
-      ctx.fill();
+    if (armyImgReady) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'multiply';
+      for (let i = 0; i < units; i++) {
+        const ix = cx - span / 2 + i * 10;
+        ctx.drawImage(_armyImg, ix - size / 2, baseY - size / 2, size, size);
+      }
+      ctx.restore();
+    } else {
+      ctx.fillStyle = ICON_INK;
+      for (let i = 0; i < units; i++) {
+        ctx.beginPath();
+        ctx.arc(cx - span / 2 + i * 10, baseY, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   } else {
+    ctx.fillStyle = ICON_INK;
     ctx.font = 'bold 12px Georgia';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1247,24 +1276,44 @@ function drawUnits(cx, cy, units) {
 }
 
 // ─── Draw routines ────────────────────────────────────────────────────────────
-function drawSea(region) {
+// All sea regions are drawn together under one clip so there are no internal
+// polygon-boundary seams — one fill, one wave pass, no edges in between.
+function drawAllSeas() {
+  if (!seaRegions.length) return;
   ctx.save();
-  tracePoly(region.pts);
-  ctx.clip();
-  if (waterPattern) {
-    ctx.drawImage(_waterImg, 0, 0, canvas.width, canvas.height);
-  } else {
-    ctx.fillStyle = '#7bbdd4';
-    ctx.fill();
-  }
-  ctx.restore();
 
-  // Seal hairline gaps at cell boundaries
-  tracePoly(region.pts);
-  ctx.strokeStyle = '#7bbdd4';
-  ctx.lineWidth = 3;
-  ctx.lineJoin = 'round';
-  ctx.stroke();
+  // Build a single clip path that is the union of all sea polygons
+  ctx.beginPath();
+  for (const region of seaRegions) {
+    const [fx, fy] = spt(region.pts[0]);
+    ctx.moveTo(fx, fy);
+    for (let i = 1; i < region.pts.length; i++) {
+      const [x, y] = spt(region.pts[i]);
+      ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  }
+  ctx.clip();
+
+  // Solid fill across entire clipped area
+  ctx.fillStyle = '#8ecfe8';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Waves drawn once, full canvas width — clip handles the shaping
+  ctx.strokeStyle = 'rgba(255,255,255,0.38)';
+  ctx.lineWidth = 1.5;
+  const waveSpacing = 12, wavePhase = 8;
+  for (let wy = wavePhase; wy < canvas.height; wy += waveSpacing) {
+    ctx.beginPath();
+    ctx.moveTo(0, wy);
+    for (let x = 0; x <= canvas.width; x += 8) {
+      ctx.quadraticCurveTo(x + 2, wy - 3, x + 4, wy);
+      ctx.quadraticCurveTo(x + 6, wy + 3, x + 8, wy);
+    }
+    ctx.stroke();
+  }
+
+  ctx.restore();
 }
 
 function drawLand(region) {
@@ -1316,7 +1365,7 @@ function render() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   for (const r of landRegions) drawLand(r);
-  for (const r of seaRegions)  drawSea(r);
+  drawAllSeas();
 
   // Uniform land borders drawn last so they're crisp and consistent
   ctx.lineJoin = 'round';
