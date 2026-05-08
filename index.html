@@ -1114,10 +1114,73 @@ function aiPickBestMove(fi) {
   return best;
 }
 
+// BFS from startIdx across land; returns the index of the first step toward the
+// nearest enemy castle owned by a faction other than fi, or null if none reachable.
+// Impassable regions (flooded / wildfire) are excluded from the search.
+function aiBfsStepTowardEnemyCastle(startIdx, fi) {
+  const visited = new Set([startIdx]);
+  // Seed queue with direct neighbors; each entry: [currentIdx, firstStepIdx]
+  const queue = [];
+  for (const nxt of landAdj[startIdx]) {
+    const r = landRegions[nxt];
+    if (r.floodTurnsRemaining > 0 || r.wildfire) continue;
+    if (visited.has(nxt)) continue;
+    visited.add(nxt);
+    queue.push([nxt, nxt]);
+  }
+  while (queue.length) {
+    const [cur, firstStep] = queue.shift();
+    const curR = landRegions[cur];
+    if (curR.type === 'castle' && curR.owner !== null && curR.owner !== fi) {
+      return firstStep;
+    }
+    for (const nxt of landAdj[cur]) {
+      if (visited.has(nxt)) continue;
+      const r = landRegions[nxt];
+      if (r.floodTurnsRemaining > 0 || r.wildfire) continue;
+      visited.add(nxt);
+      queue.push([nxt, firstStep]);
+    }
+  }
+  return null;
+}
+
+// Fallback: move the AI's largest army one step toward the nearest enemy castle.
+// Only fires when aiPickBestMove found nothing worth doing this move.
+function aiMarchFallback(fi) {
+  // Collect all eligible armies, largest first, then try each until one can march.
+  const candidates = [];
+  for (let i = 0; i < landRegions.length; i++) {
+    const r = landRegions[i];
+    if (r.owner !== fi || movedRegions.has(i) || r.units <= 0) continue;
+    if (r.floodTurnsRemaining > 0 || r.wildfire) continue;
+    candidates.push(i);
+  }
+  candidates.sort((a, b) => landRegions[b].units - landRegions[a].units);
+
+  for (const fromIdx of candidates) {
+    const toIdx = aiBfsStepTowardEnemyCastle(fromIdx, fi);
+    if (toIdx === null) continue;
+
+    const to = landRegions[toIdx];
+    if (to.owner === fi) continue; // first step blocked by own territory — try next army
+    if (to.floodTurnsRemaining > 0 || to.wildfire) continue;
+    if (to.owner !== null) {
+      const from = landRegions[fromIdx];
+      const atkStrength = from.units + (fi === 1 ? 1 : 0) + (richHarvest ? 1 : 0);
+      const defStrength = to.units   + (to.owner === 2 ? 1 : 0);
+      if (atkStrength <= defStrength) continue; // would lose — try next army
+    }
+
+    return { fromIdx, toIdx };
+  }
+  return null;
+}
+
 // Execute one AI move; once the animation resolves, wait 600ms then pick next.
 function aiDoNextMove(fi) {
   if (movesLeft <= 0) { aiTurnActive = false; endFactionTurn(); return; }
-  const move = aiPickBestMove(fi);
+  const move = aiPickBestMove(fi) || aiMarchFallback(fi);
   if (!move)          { aiTurnActive = false; endFactionTurn(); return; }
 
   // Keep the source region highlighted throughout the combat flash so the
