@@ -124,6 +124,23 @@
     #recruit-btn:hover:not(:disabled) { background: #2a5020; }
     #recruit-btn:disabled { opacity: 0.35; cursor: default; }
 
+    /* ── Palisade panel ── */
+    #palisade-btn {
+      width: 100%;
+      padding: 9px;
+      background: #16281e;
+      color: #70a888;
+      border: 1px solid #2a5038;
+      border-radius: 3px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 13px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    #palisade-btn:hover:not(:disabled) { background: #1e3828; }
+    #palisade-btn:disabled { opacity: 0.35; cursor: default; }
+
     /* ── Canvas wrap ── */
     #map-wrap { flex: 1; position: relative; overflow: hidden; }
     canvas { display: block; width: 100%; height: 100%; }
@@ -549,6 +566,14 @@
       </div>
     </div>
 
+    <div id="palisade-panel" style="display:none">
+      <hr class="sep">
+      <div class="s-section">
+        <div class="s-label">Fortify</div>
+        <button id="palisade-btn">Build Palisade (3c)</button>
+      </div>
+    </div>
+
     <button id="end-turn-btn">End Turn</button>
   </aside>
 
@@ -574,29 +599,36 @@ const ctx    = canvas.getContext('2d');
 let regionsReady = false;
 const _regionsImg = new Image();
 _regionsImg.onload  = () => { regionsReady = true; render(); };
-_regionsImg.onerror = () => console.error('Failed to load Regions.jpg');
-_regionsImg.src = 'Regions.jpg';
+_regionsImg.onerror = () => console.error('Failed to load images/Regions.jpg');
+_regionsImg.src = 'images/Regions.jpg';
 
 // ─── Castle image ─────────────────────────────────────────────────────────────
 let castleImgReady = false;
 const _castleImg = new Image();
 _castleImg.onload  = () => { castleImgReady = true; render(); };
-_castleImg.onerror = () => console.error('Failed to load Castle2.jpg');
-_castleImg.src = 'Castle2.jpg';
+_castleImg.onerror = () => console.error('Failed to load images/Castle2.jpg');
+_castleImg.src = 'images/Castle2.jpg';
 
 // ─── Village image ────────────────────────────────────────────────────────────
 let villageImgReady = false;
 const _villageImg = new Image();
 _villageImg.onload  = () => { villageImgReady = true; render(); };
-_villageImg.onerror = () => console.error('Failed to load Village2.png');
-_villageImg.src = 'Village2.png';
+_villageImg.onerror = () => console.error('Failed to load images/Village2.png');
+_villageImg.src = 'images/Village2.png';
 
 // ─── Army image ───────────────────────────────────────────────────────────────
 let armyImgReady = false;
 const _armyImg = new Image();
 _armyImg.onload  = () => { armyImgReady = true; render(); };
-_armyImg.onerror = () => console.error('Failed to load army2.png');
-_armyImg.src = 'army2.png';
+_armyImg.onerror = () => console.error('Failed to load images/army2.png');
+_armyImg.src = 'images/army2.png';
+
+// ─── Palisade image ───────────────────────────────────────────────────────────
+let palisadeImgReady = false;
+const _palisadeImg = new Image();
+_palisadeImg.onload  = () => { palisadeImgReady = true; render(); };
+_palisadeImg.onerror = () => console.error('Failed to load images/palisade.png');
+_palisadeImg.src = 'images/Palisade.png';
 
 function hexToRgba(hex, alpha) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -713,6 +745,7 @@ function generateMap(cells, seeds, seaSet) {
     coastal: adj[landOrig[li]].some(j => seaSet.has(j)),
     floodTurnsRemaining: 0,
     wildfire: false,
+    hasPalisade: false,
   }));
 
   // 4 player castles — nearest land seed to each corner
@@ -852,7 +885,12 @@ let economicWinner     = -1;           // faction index when economic win trigge
 const RECRUIT_COSTS    = [2, 4, 7, 11, 16];
 let recruitedThisTurn  = 0;         // units recruited by player 0 this turn
 let recruitCastleIdx   = null;      // region index of open recruit panel, or null
+let palisadePanelIdx   = null;      // region index of open palisade panel, or null
 let incomeFlashTimer   = null;      // setTimeout handle for income summary
+
+function palisadeCount(fi) {
+  return landRegions.filter(r => r.owner === fi && r.hasPalisade).length;
+}
 
 function movesForFaction(fi) {
   // Ninjas get +1 move every 3rd round (rounds 3, 6, 9 …)
@@ -955,11 +993,13 @@ function executeMove(fromIdx, toIdx, onComplete, commitUnits) {
     + (isCombat && attacker === 1 ? 1 : 0)
     + (isCombat && richHarvest    ? 1 : 0);
   const defStrength = to.units
+    + (to.hasPalisade ? 1 : 0)
     + (isCombat && to.owner === 2 ? 1 : 0);
 
   function resolveAttackerWins(survivors) {
-    to.owner    = attacker;
-    to.units    = survivors;
+    to.owner       = attacker;
+    to.units       = survivors;
+    to.hasPalisade = false;
     from.units -= commitUnits;
     movedRegions.add(toIdx);
     movesLeft--;
@@ -978,8 +1018,7 @@ function executeMove(fromIdx, toIdx, onComplete, commitUnits) {
   selectedRegion = null;
   runCombatFlash(toIdx, FACTION_COLORS[attacker], () => {
     if (atkStrength > defStrength) {
-      const atkPhantom = (isCombat && attacker === 1 ? 1 : 0) + (isCombat && richHarvest ? 1 : 0);
-      const survivors = commitUnits - Math.max(0, to.units - atkPhantom);
+      const survivors = Math.max(1, commitUnits - to.units);
       resolveAttackerWins(survivors);
       render();
       drawVictoryOverlay(survivors);
@@ -1013,7 +1052,7 @@ function executeMove(fromIdx, toIdx, onComplete, commitUnits) {
       drawTieOverlay();
       setTimeout(() => {
         if (Math.random() < 0.5) resolveAttackerWins(1);
-        else                      resolveDefenderWins(1);
+        else                      resolveDefenderWins(to.units > 0 ? 1 : 0);
         combatBlocked = false;
         checkEliminations(shouldEnd => {
           if (shouldEnd) { showGameOver(); return; }
@@ -1172,6 +1211,7 @@ function recruitCost() {
 }
 
 function openRecruitPanel(idx) {
+  closePalisadePanel();
   recruitCastleIdx = idx;
   refreshRecruitPanel();
 }
@@ -1179,6 +1219,26 @@ function openRecruitPanel(idx) {
 function closeRecruitPanel() {
   recruitCastleIdx = null;
   document.getElementById('recruit-panel').style.display = 'none';
+}
+
+function openPalisadePanel(idx) {
+  closeRecruitPanel();
+  palisadePanelIdx = idx;
+  refreshPalisadePanel();
+}
+
+function closePalisadePanel() {
+  palisadePanelIdx = null;
+  document.getElementById('palisade-panel').style.display = 'none';
+}
+
+function refreshPalisadePanel() {
+  if (palisadePanelIdx === null) return;
+  document.getElementById('palisade-panel').style.display = 'block';
+  const r   = landRegions[palisadePanelIdx];
+  const pc  = palisadeCount(HUMAN_FACTION);
+  const btn = document.getElementById('palisade-btn');
+  btn.disabled = r.hasPalisade || pc >= 3 || coins[HUMAN_FACTION] < 3;
 }
 
 function refreshRecruitPanel() {
@@ -1229,6 +1289,7 @@ function endFactionTurn() {
   selectedRegion = null;
   recruitedThisTurn = 0;
   closeRecruitPanel();
+  closePalisadePanel();
 
   // Check for eliminations caused by income/production (e.g. castle stolen last turn)
   checkEliminations(shouldEnd => {
@@ -1297,7 +1358,7 @@ function scoreAiMove(fromIdx, toIdx, fi) {
   if (to.owner === fi) return -1; // merging own units is not in the priority list
 
   const atkStrength = from.units + (fi === 1 ? 1 : 0) + (richHarvest ? 1 : 0);
-  const defStrength = to.units   + (to.owner === 2 ? 1 : 0);
+  const defStrength = to.units + (to.hasPalisade ? 1 : 0) + (to.owner === 2 ? 1 : 0);
 
   if (to.owner === null) {
     if (atkStrength <= defStrength) return -1; // can't win
@@ -1382,7 +1443,7 @@ function aiMarchFallback(fi) {
     if (to.owner !== null) {
       const from = landRegions[fromIdx];
       const atkStrength = from.units + (fi === 1 ? 1 : 0) + (richHarvest ? 1 : 0);
-      const defStrength = to.units   + (to.owner === 2 ? 1 : 0);
+      const defStrength = to.units + (to.hasPalisade ? 1 : 0) + (to.owner === 2 ? 1 : 0);
       if (atkStrength <= defStrength) continue; // would lose — try next army
     }
 
@@ -1407,10 +1468,28 @@ function aiDoNextMove(fi) {
   selectedRegion = move.fromIdx; // restore after executeMove clears it
 }
 
+function aiPalisade(fi) {
+  if (coins[fi] < 3 || palisadeCount(fi) >= 3) return;
+  for (let i = 0; i < landRegions.length; i++) {
+    const r = landRegions[i];
+    if (r.owner !== fi || r.type !== 'empty' || r.hasPalisade) continue;
+    const adjacentToEnemy = landAdj[i].some(j => {
+      const n = landRegions[j];
+      return n.owner !== null && n.owner !== fi;
+    });
+    if (adjacentToEnemy) {
+      r.hasPalisade = true;
+      coins[fi] -= 3;
+      return;
+    }
+  }
+}
+
 function runAiTurn() {
   const fi = currentFaction;
   aiTurnActive = true;
   aiRecruit(fi);
+  aiPalisade(fi);
   render();
   updateSidebar();
   // Brief pause before first move so the player registers whose turn it is
@@ -1438,6 +1517,7 @@ function saveGame() {
       pts: r.pts, owner: r.owner, type: r.type, units: r.units, coastal: r.coastal,
       floodTurnsRemaining: r.floodTurnsRemaining ?? 0,
       wildfire: r.wildfire ?? false,
+      hasPalisade: r.hasPalisade ?? false,
     })),
     seaRegions:  seaRegions.map(r => ({ pts: r.pts })),
     landAdj:     landAdj.map(a => a.slice()),
@@ -1451,7 +1531,7 @@ function loadGame(state) {
   VICTORY_MODE  = state.VICTORY_MODE  ?? 'conquest';
 
   landRegions.length = 0;
-  for (const r of state.landRegions) landRegions.push(r);
+  for (const r of state.landRegions) landRegions.push({ ...r, hasPalisade: r.hasPalisade ?? false });
 
   seaRegions.length = 0;
   for (const r of state.seaRegions) seaRegions.push(r);
@@ -1526,6 +1606,23 @@ function drawVillage(cx, cy) {
   }
 }
 
+
+function drawPalisade(cx, cy) {
+  const size = 36;
+  if (palisadeImgReady) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(_palisadeImg, cx - size / 2, cy - size / 2, size, size);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = ICON_INK;
+    for (let i = 0; i < 5; i++) {
+      ctx.fillRect(cx - 12 + i * 6, cy - 12, 3, 14);
+    }
+    ctx.fillRect(cx - 14, cy - 9, 28, 2);
+    ctx.fillRect(cx - 14, cy - 4, 28, 2);
+  }
+}
 
 // Up to 5 helmet icons; 6+ shows a number.
 function drawUnits(cx, cy, units) {
@@ -1636,6 +1733,7 @@ function drawLand(region) {
   const [cx, cy] = centroid(region.pts);
   if (region.type === 'castle')  drawCastle(cx, cy);
   if (region.type === 'village') drawVillage(cx, cy);
+  if (region.hasPalisade)        drawPalisade(cx, cy);
 
   drawUnits(cx, cy, region.units);
 }
@@ -1856,7 +1954,11 @@ function updateSidebar() {
       row.querySelector('.f-name').style.color = '#4a3020';
       row.querySelector('.f-meta').textContent = 'Eliminated';
     } else {
-      row.querySelector('.f-meta').textContent = `${counts[fi]} rgn · ${coins[fi]}c`;
+      const pc   = palisadeCount(fi);
+      const meta = pc > 0
+        ? `${counts[fi]} rgn · ${coins[fi]}c · ${pc} palisade${pc !== 1 ? 's' : ''}`
+        : `${counts[fi]} rgn · ${coins[fi]}c`;
+      row.querySelector('.f-meta').textContent = meta;
       row.style.opacity = fi === currentFaction ? '1' : '0.5';
       row.querySelector('.f-name').style.color = fi === currentFaction ? '#e8d090' : '#c0a870';
     }
@@ -1919,6 +2021,7 @@ function beginGame() {
   gameOver          = false;
   recruitedThisTurn = 0;
   recruitCastleIdx  = null;
+  palisadePanelIdx  = null;
   coins.fill(0);
   eliminated.fill(false);
   currentEvent = null;
@@ -1928,6 +2031,7 @@ function beginGame() {
 
   document.getElementById('gameover-screen').style.display = 'none';
   closeRecruitPanel();
+  closePalisadePanel();
 
   hideSetupScreen();
   resize();
@@ -1983,24 +2087,37 @@ canvas.addEventListener('click', e => {
   const hit = hitLandRegion(lpx, lpy);
 
   if (selectedRegion !== null && hit !== -1 && landAdj[selectedRegion].includes(hit) && isValidMoveTarget(hit)) {
-    // Moving into adjacent region — close panel, execute move with committed split
+    // Moving into adjacent region — close panels, execute move with committed split
     closeRecruitPanel();
+    closePalisadePanel();
     executeMove(selectedRegion, hit, undefined, splitCount);
   } else {
     const isOwnCastle = hit !== -1 && landRegions[hit].owner === HUMAN_FACTION && landRegions[hit].type === 'castle';
+    const isOwnEmpty  = hit !== -1 && landRegions[hit].owner === HUMAN_FACTION && landRegions[hit].type === 'empty';
     if (isOwnCastle) {
       // Own castle — open recruit panel and select for movement
       openRecruitPanel(hit);
       selectedRegion = hit;
       splitCount = landRegions[hit].units;
+    } else if (isOwnEmpty) {
+      // Own empty region — open palisade panel; select for movement if it has units
+      openPalisadePanel(hit);
+      if (canSelect(hit)) {
+        selectedRegion = hit;
+        splitCount = landRegions[hit].units;
+      } else {
+        selectedRegion = null;
+      }
     } else if (hit !== -1 && canSelect(hit)) {
-      // Own non-castle region — close panel, select for movement
+      // Own non-castle/non-empty region — close panels, select for movement
       closeRecruitPanel();
+      closePalisadePanel();
       selectedRegion = hit;
       splitCount = landRegions[hit].units;
     } else {
-      // Anything else — close panel, deselect
+      // Anything else — close panels, deselect
       closeRecruitPanel();
+      closePalisadePanel();
       selectedRegion = null;
     }
   }
@@ -2040,13 +2157,25 @@ document.getElementById('split-plus').addEventListener('click', () => {
   document.getElementById('split-count').textContent = splitCount;
 });
 
+document.getElementById('palisade-btn').addEventListener('click', () => {
+  if (palisadePanelIdx === null || combatBlocked) return;
+  const r = landRegions[palisadePanelIdx];
+  if (r.hasPalisade || palisadeCount(HUMAN_FACTION) >= 3 || coins[HUMAN_FACTION] < 3) return;
+  r.hasPalisade = true;
+  coins[HUMAN_FACTION] -= 3;
+  refreshPalisadePanel();
+  updateSidebar();
+  render();
+});
+
 canvas.addEventListener('mousemove', e => {
   if (aiTurnActive || currentFaction !== HUMAN_FACTION || gameOver) { canvas.style.cursor = 'default'; return; }
   const [lpx, lpy] = logicalFromEvent(e);
   const hit = hitLandRegion(lpx, lpy);
   const isSelectable  = hit !== -1 && canSelect(hit);
   const isValidTarget = hit !== -1 && selectedRegion !== null && landAdj[selectedRegion].includes(hit) && isValidMoveTarget(hit);
-  canvas.style.cursor = (isSelectable || isValidTarget) ? 'pointer' : 'default';
+  const isOwnEmpty    = hit !== -1 && landRegions[hit].owner === HUMAN_FACTION && landRegions[hit].type === 'empty';
+  canvas.style.cursor = (isSelectable || isValidTarget || isOwnEmpty) ? 'pointer' : 'default';
 });
 
 document.getElementById('gameover-play-again').addEventListener('click', () => {

@@ -247,3 +247,34 @@ Always spends available coins on units if it can afford the 1st or 2nd unit cost
 ### UI Panel
 - Dark sidebar, clean typography
 - Always visible: turn counter, coin balance per faction, region count per faction, current event card, moves remaining
+
+## 16. Palisades
+
+Palisades are purchasable field fortifications that can be built 
+on empty regions to hinder enemy progress.
+
+### Rules
+- Cost: 3 coins per palisade
+- Can only be placed on owned empty regions (not castles or villages)
+- A region with a palisade gets +1 defence in combat, even with 
+  0 army units present
+- Palisade is destroyed when the region is conquered by an enemy
+- Maximum 3 palisades per player at any time
+- Palisades coexist with garrisoned armies — both bonuses apply
+- Palisades are visible to all players at all times
+
+### Economy
+- Palisade count shown in sidebar: "31c · 2 palisades"
+- Palisades do not generate income
+- Palisades do not produce armies
+
+### Combat Interaction
+- +1 defence applied before all other modifiers
+- Stacks with Stoics passive (+1 defence)
+- Stacks with garrisoned army units
+- Destroyed on conquest, not transferred to new owner
+
+### AI Behavior
+- AI builds a palisade if it has 3+ coins, fewer than 3 palisades,
+  and owns an empty region adjacent to an enemy region
+- Priority: below recruiting units, above doing nothing
