@@ -176,7 +176,7 @@
     #setup-screen {
       display: none;
       position: fixed; inset: 0; z-index: 110;
-      background: #16110a;
+      background: rgba(0,0,0,0.82);
       align-items: flex-start; justify-content: center;
       overflow-y: auto;
     }
@@ -200,18 +200,26 @@
       text-transform: uppercase;
       margin-top: 8px;
     }
-    .setup-section {
+    .setup-card {
       border: 1px solid #261a08;
-      border-radius: 4px;
-      padding: 18px 20px;
+      border-radius: 6px;
       background: #1a1206;
+      padding: 28px 28px 24px;
+      display: flex; flex-direction: column; gap: 22px;
+    }
+    .setup-sep {
+      border: none;
+      border-top: 1px solid #261a08;
+      margin: 0;
+    }
+    .setup-section {
+      display: flex; flex-direction: column; gap: 14px;
     }
     .setup-section-label {
       font-size: 9px;
       text-transform: uppercase;
       letter-spacing: 2.5px;
       color: #6a5030;
-      margin-bottom: 14px;
     }
     .faction-cards { display: flex; gap: 10px; }
     .faction-card {
@@ -231,8 +239,8 @@
     .faction-swatch { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; }
     .faction-card-name { color: #c0a870; font-size: 14px; }
     .faction-card.selected .faction-card-name { color: #e8d090; }
-    .faction-card-trait { color: #4a3820; font-size: 11px; line-height: 1.5; font-style: italic; }
-    .faction-card.selected .faction-card-trait { color: #7a6040; }
+    .faction-card-trait { color: #a89070; font-size: 13px; line-height: 1.5; font-style: italic; }
+    .faction-card.selected .faction-card-trait { color: #f0d898; }
     .option-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .option-btn {
       padding: 10px 16px;
@@ -250,8 +258,8 @@
     }
     .option-btn:hover { border-color: #5a3810; color: #c0a870; }
     .option-btn.selected { border-color: #c9a84c; background: rgba(201,168,76,0.07); color: #e8d090; }
-    .option-btn-desc { font-size: 11px; color: #4a3820; font-style: italic; display: block; margin-top: 3px; }
-    .option-btn.selected .option-btn-desc { color: #6a5030; }
+    .option-btn-desc { font-size: 13px; color: #a89070; font-style: italic; display: block; margin-top: 3px; }
+    .option-btn.selected .option-btn-desc { color: #f0d898; }
     #start-game-btn {
       align-self: center;
       padding: 13px 60px;
@@ -264,7 +272,6 @@
       letter-spacing: 3px;
       text-transform: uppercase;
       cursor: pointer;
-      margin-top: 6px;
     }
     #start-game-btn:hover { background: #4a3418; border-color: #c9a84c; }
 
@@ -353,76 +360,86 @@
 
 <div id="setup-screen">
   <div class="setup-inner">
-    <div class="setup-title-wrap">
-      <div class="setup-title">War of Castles</div>
-      <div class="setup-subtitle">Medieval Territory Strategy</div>
-    </div>
+    <div class="setup-card">
+      <div class="setup-title-wrap">
+        <div class="setup-title">War of Castles</div>
+        <div class="setup-subtitle">Medieval Territory Strategy</div>
+      </div>
 
-    <div class="setup-section">
-      <div class="setup-section-label">Choose Your Faction</div>
-      <div class="faction-cards">
-        <div class="faction-card selected" data-faction="0">
-          <div class="faction-card-top">
-            <div class="faction-swatch" style="background:#c97b84"></div>
-            <div class="faction-card-name">Merchants</div>
+      <hr class="setup-sep">
+
+      <div class="setup-section">
+        <div class="setup-section-label">Choose Your Faction</div>
+        <div class="faction-cards">
+          <div class="faction-card selected" data-faction="0">
+            <div class="faction-card-top">
+              <div class="faction-swatch" style="background:#c97b84"></div>
+              <div class="faction-card-name">Merchants</div>
+            </div>
+            <div class="faction-card-trait">+1 coin per turn</div>
           </div>
-          <div class="faction-card-trait">+1 coin per turn</div>
-        </div>
-        <div class="faction-card" data-faction="1">
-          <div class="faction-card-top">
-            <div class="faction-swatch" style="background:#4a7fa5"></div>
-            <div class="faction-card-name">Warriors</div>
+          <div class="faction-card" data-faction="1">
+            <div class="faction-card-top">
+              <div class="faction-swatch" style="background:#4a7fa5"></div>
+              <div class="faction-card-name">Warriors</div>
+            </div>
+            <div class="faction-card-trait">Attacking armies count as +1 unit in combat</div>
           </div>
-          <div class="faction-card-trait">Attacking armies count as +1 unit in combat</div>
-        </div>
-        <div class="faction-card" data-faction="2">
-          <div class="faction-card-top">
-            <div class="faction-swatch" style="background:#8a9a5b"></div>
-            <div class="faction-card-name">Stoics</div>
+          <div class="faction-card" data-faction="2">
+            <div class="faction-card-top">
+              <div class="faction-swatch" style="background:#8a9a5b"></div>
+              <div class="faction-card-name">Stoics</div>
+            </div>
+            <div class="faction-card-trait">Defending armies count as +1 unit in combat</div>
           </div>
-          <div class="faction-card-trait">Defending armies count as +1 unit in combat</div>
-        </div>
-        <div class="faction-card" data-faction="3">
-          <div class="faction-card-top">
-            <div class="faction-swatch" style="background:#5fb3a1"></div>
-            <div class="faction-card-name">Ninjas</div>
+          <div class="faction-card" data-faction="3">
+            <div class="faction-card-top">
+              <div class="faction-swatch" style="background:#5fb3a1"></div>
+              <div class="faction-card-name">Ninjas</div>
+            </div>
+            <div class="faction-card-trait">+1 extra move every 3rd turn (turns 3, 6, 9…)</div>
           </div>
-          <div class="faction-card-trait">+1 extra move every 3rd turn (turns 3, 6, 9…)</div>
         </div>
       </div>
-    </div>
 
-    <div class="setup-section">
-      <div class="setup-section-label">Victory Condition</div>
-      <div class="option-row">
-        <button class="option-btn selected" data-victory="conquest">
-          Conquest<span class="option-btn-desc">Most regions when turns run out</span>
-        </button>
-        <button class="option-btn" data-victory="economic">
-          Economic Win<span class="option-btn-desc">First to 50 coins ends the game</span>
-        </button>
+      <hr class="setup-sep">
+
+      <div class="setup-section">
+        <div class="setup-section-label">Victory Condition</div>
+        <div class="option-row">
+          <button class="option-btn selected" data-victory="conquest">
+            Conquest<span class="option-btn-desc">Most regions when turns run out</span>
+          </button>
+          <button class="option-btn" data-victory="economic">
+            Economic Win<span class="option-btn-desc">First to 50 coins ends the game</span>
+          </button>
+        </div>
       </div>
-    </div>
 
-    <div class="setup-section">
-      <div class="setup-section-label">Session Mode</div>
-      <div class="option-row">
-        <button class="option-btn" data-turns="9">
-          Quick Skirmish<span class="option-btn-desc">9 turns · ~12 min</span>
-        </button>
-        <button class="option-btn selected" data-turns="12">
-          Standard<span class="option-btn-desc">12 turns · ~20 min</span>
-        </button>
-        <button class="option-btn" data-turns="15">
-          Marathon<span class="option-btn-desc">15 turns · ~30 min</span>
-        </button>
-        <button class="option-btn" data-turns="0">
-          Endless<span class="option-btn-desc">Play until eliminated</span>
-        </button>
+      <hr class="setup-sep">
+
+      <div class="setup-section">
+        <div class="setup-section-label">Session Mode</div>
+        <div class="option-row">
+          <button class="option-btn" data-turns="9">
+            Quick Skirmish<span class="option-btn-desc">9 turns · ~12 min</span>
+          </button>
+          <button class="option-btn selected" data-turns="12">
+            Standard<span class="option-btn-desc">12 turns · ~20 min</span>
+          </button>
+          <button class="option-btn" data-turns="15">
+            Marathon<span class="option-btn-desc">15 turns · ~30 min</span>
+          </button>
+          <button class="option-btn" data-turns="0">
+            Endless<span class="option-btn-desc">Play until eliminated</span>
+          </button>
+        </div>
       </div>
-    </div>
 
-    <button id="start-game-btn">Start Game</button>
+      <hr class="setup-sep">
+
+      <button id="start-game-btn">Start Game</button>
+    </div>
   </div>
 </div>
 
@@ -976,7 +993,8 @@ function executeMove(fromIdx, toIdx, onComplete, commitUnits) {
         });
       }, 1000);
     } else if (defStrength > atkStrength) {
-      const survivors = to.units - commitUnits;
+      const defPhantom = (isCombat && to.owner === 2 ? 1 : 0);
+      const survivors = to.units - Math.max(0, commitUnits - defPhantom);
       resolveDefenderWins(survivors);
       render();
       drawDefeatOverlay(survivors);
@@ -1127,7 +1145,7 @@ function showGameOver() {
 
   if (economicWinner >= 0) {
     document.getElementById('gameover-winner').textContent = humanWon
-      ? `You amassed ${coins[HUMAN_FACTION]} coins and claimed economic dominance!`
+      ? `Congratulations! You've become the wealthiest faction in the realm.`
       : `${FACTION_NAMES[winner]} reached 50 coins and seized economic control.`;
   } else {
     document.getElementById('gameover-winner').textContent = humanWon
@@ -1749,7 +1767,7 @@ function showEventCard(event) {
 
 function showEliminationCard(fi, onDone) {
   const card = document.getElementById('event-card');
-  card.querySelector('.event-card-emoji').textContent = '💀';
+  card.querySelector('.event-card-emoji').textContent = '🪦';
   card.querySelector('.event-card-label').textContent = 'Eliminated';
   card.querySelector('.event-card-name').textContent  = `${FACTION_NAMES[fi]} have fallen`;
   card.style.display = 'flex';
@@ -1874,8 +1892,10 @@ function updateSidebar() {
 // ─── Game start helpers ───────────────────────────────────────────────────────
 
 function showSetupScreen() {
+  initMap();
+  document.getElementById('app').style.display = 'flex';
+  resize();
   document.getElementById('setup-screen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
 }
 
 function hideSetupScreen() {
@@ -1908,7 +1928,6 @@ function beginGame() {
   document.getElementById('gameover-screen').style.display = 'none';
   closeRecruitPanel();
 
-  initMap();
   hideSetupScreen();
   resize();
   drawWorldEvent();
