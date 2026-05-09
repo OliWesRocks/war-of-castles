@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>War of Castles</title>
+  <title>Castles at War</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #16110a; font-family: Georgia, 'Times New Roman', serif; }
@@ -144,6 +144,74 @@
     /* ── Canvas wrap ── */
     #map-wrap { flex: 1; position: relative; overflow: hidden; }
     canvas { display: block; width: 100%; height: 100%; }
+
+    /* ── How To button ── */
+    #howto-btn {
+      position: absolute; top: 10px; right: 10px; z-index: 60;
+      padding: 6px 14px;
+      background: #1a1206;
+      color: #c9a84c;
+      border: 1px solid #6a4820;
+      border-radius: 3px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      user-select: none;
+    }
+    #howto-btn:hover { background: #2a1e10; border-color: #c9a84c; }
+
+    /* ── How To overlay ── */
+    #howto-screen {
+      display: none;
+      position: fixed; inset: 0; z-index: 120;
+      background: rgba(0,0,0,0.82);
+      align-items: flex-start; justify-content: center;
+      overflow-y: auto;
+    }
+    #howto-screen.open { display: flex; }
+    .howto-inner {
+      width: 100%; max-width: 700px;
+      padding: 36px 48px 48px;
+    }
+    .howto-card {
+      border: 1px solid #261a08;
+      border-radius: 6px;
+      background: #1a1206;
+      padding: 28px 32px 28px;
+      display: flex; flex-direction: column; gap: 18px;
+      position: relative;
+    }
+    .howto-title {
+      color: #c9a84c;
+      font-size: 13px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      text-align: center;
+    }
+    .howto-sep {
+      border: none;
+      border-top: 1px solid #261a08;
+      margin: 0;
+    }
+    .howto-body {
+      color: #c0a870;
+      font-size: 14px;
+      line-height: 1.75;
+    }
+    .howto-body p { margin: 0 0 10px; }
+    .howto-body p:last-child { margin-bottom: 0; }
+    .howto-body strong { color: #e8d090; }
+    .howto-close {
+      position: absolute; top: 12px; right: 14px;
+      background: none; border: none;
+      color: #6a5030; font-size: 20px;
+      cursor: pointer; line-height: 1;
+      font-family: Georgia, 'Times New Roman', serif;
+    }
+    .howto-close:hover { color: #c9a84c; }
 
     /* ── Army split stepper ── */
     #split-stepper {
@@ -379,7 +447,7 @@
   <div class="setup-inner">
     <div class="setup-card">
       <div class="setup-title-wrap">
-        <div class="setup-title">War of Castles</div>
+        <div class="setup-title">Castles at War</div>
         <div class="setup-subtitle">Medieval Territory Strategy</div>
       </div>
 
@@ -498,7 +566,7 @@
 
 <div id="app" style="display:none">
   <aside id="sidebar">
-    <div class="game-title">War of Castles</div>
+    <div class="game-title">Castles at War</div>
 
     <div class="s-section">
       <div class="s-label">Turn</div>
@@ -583,6 +651,44 @@
       <button class="split-btn" id="split-minus">−</button>
       <span id="split-count">1</span>
       <button class="split-btn" id="split-plus">+</button>
+    </div>
+    <button id="howto-btn">How to</button>
+  </div>
+</div>
+
+<div id="howto-screen">
+  <div class="howto-inner">
+    <div class="howto-card">
+      <button class="howto-close" id="howto-close">&#x2715;</button>
+      <div class="howto-title">How to Play</div>
+      <hr class="howto-sep">
+      <div class="howto-body">
+        <p><strong>Goal.</strong><br>
+        Conquer the realm. Win by holding the most regions when time runs out, or be the first to amass 50 coins.</p>
+        <p>Each turn you get <strong>3 moves</strong>.<br>
+        One move = march one army into a neighbouring region.</p>
+        <p><strong>Castles</strong> produce 1 army unit per turn.<br>
+        <strong>Villages</strong> produce 2 coins per turn.<br>
+        Every 2 villages you own boosts one castle to produce an extra unit per turn.</p>
+        <p>Spend coins to recruit extra units or build palisades.<br>
+        Palisades cost 3 coins and add +1 defence to any empty region. Maximum 3 per player.</p>
+        <p>Combat is decided by numbers — bigger army wins. Ties are decided by fate. Both sides take losses.</p>
+      </div>
+      <hr class="howto-sep">
+      <div class="howto-body">
+        <p>Your faction has a unique power:</p>
+        <p>
+          <strong>Merchants:</strong> +1 coin per turn<br>
+          <strong>Warriors:</strong> +1 attacking unit in battle<br>
+          <strong>Stoics:</strong> +1 defending unit in battle<br>
+          <strong>Ninjas:</strong> extra move every 3rd turn
+        </p>
+      </div>
+      <hr class="howto-sep">
+      <div class="howto-body">
+        <p>Each round a <strong>World Event</strong> strikes — floods block coastal regions, wildfires burn the land, rich harvests power up your attacks. No event repeats twice in a row.</p>
+        <p>You are eliminated when you lose all armies and all castles.</p>
+      </div>
     </div>
   </div>
 </div>
@@ -1018,7 +1124,7 @@ function executeMove(fromIdx, toIdx, onComplete, commitUnits) {
   selectedRegion = null;
   runCombatFlash(toIdx, FACTION_COLORS[attacker], () => {
     if (atkStrength > defStrength) {
-      const survivors = Math.max(1, commitUnits - to.units);
+      const survivors = Math.max(1, commitUnits - defStrength);
       resolveAttackerWins(survivors);
       render();
       drawVictoryOverlay(survivors);
@@ -1586,14 +1692,14 @@ function drawCastle(cx, cy) {
 }
 
 function drawVillage(cx, cy) {
-  const size = 42;
+  const size = 29;
   if (villageImgReady) {
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
     ctx.drawImage(_villageImg, cx - size / 2, cy - size / 2, size, size);
     ctx.restore();
   } else {
-    const w = 16, bodyH = 10, roofH = 8;
+    const w = 11, bodyH = 7, roofH = 6;
     const x = cx - w / 2, y = cy - (bodyH + roofH) / 2;
     ctx.fillStyle = ICON_INK;
     ctx.fillRect(x, y + roofH, w, bodyH);
@@ -1608,19 +1714,19 @@ function drawVillage(cx, cy) {
 
 
 function drawPalisade(cx, cy) {
-  const size = 36;
+  const pw = 47, ph = 29;
   if (palisadeImgReady) {
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(_palisadeImg, cx - size / 2, cy - size / 2, size, size);
+    ctx.drawImage(_palisadeImg, cx - pw / 2, cy - ph / 2, pw, ph);
     ctx.restore();
   } else {
     ctx.fillStyle = ICON_INK;
     for (let i = 0; i < 5; i++) {
-      ctx.fillRect(cx - 12 + i * 6, cy - 12, 3, 14);
+      ctx.fillRect(cx - 16 + i * 8, cy - 10, 3, 11);
     }
-    ctx.fillRect(cx - 14, cy - 9, 28, 2);
-    ctx.fillRect(cx - 14, cy - 4, 28, 2);
+    ctx.fillRect(cx - 18, cy - 7, 36, 2);
+    ctx.fillRect(cx - 18, cy - 3, 36, 2);
   }
 }
 
@@ -2095,10 +2201,14 @@ canvas.addEventListener('click', e => {
     const isOwnCastle = hit !== -1 && landRegions[hit].owner === HUMAN_FACTION && landRegions[hit].type === 'castle';
     const isOwnEmpty  = hit !== -1 && landRegions[hit].owner === HUMAN_FACTION && landRegions[hit].type === 'empty';
     if (isOwnCastle) {
-      // Own castle — open recruit panel and select for movement
+      // Own castle — open recruit panel and select for movement if eligible
       openRecruitPanel(hit);
-      selectedRegion = hit;
-      splitCount = landRegions[hit].units;
+      if (canSelect(hit)) {
+        selectedRegion = hit;
+        splitCount = landRegions[hit].units;
+      } else {
+        selectedRegion = null;
+      }
     } else if (isOwnEmpty) {
       // Own empty region — open palisade panel; select for movement if it has units
       openPalisadePanel(hit);
@@ -2129,6 +2239,17 @@ canvas.addEventListener('click', e => {
 
 document.getElementById('end-turn-btn').addEventListener('click', () => {
   if (!combatBlocked && !aiTurnActive && currentFaction === HUMAN_FACTION) endFactionTurn();
+});
+
+document.getElementById('howto-btn').addEventListener('click', () => {
+  document.getElementById('howto-screen').classList.add('open');
+});
+document.getElementById('howto-close').addEventListener('click', () => {
+  document.getElementById('howto-screen').classList.remove('open');
+});
+document.getElementById('howto-screen').addEventListener('click', e => {
+  if (e.target === document.getElementById('howto-screen'))
+    document.getElementById('howto-screen').classList.remove('open');
 });
 
 document.getElementById('recruit-btn').addEventListener('click', () => {
