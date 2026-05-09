@@ -172,6 +172,102 @@
       #rotate-prompt { display: flex; }
     }
 
+    /* ── Setup screen ── */
+    #setup-screen {
+      display: none;
+      position: fixed; inset: 0; z-index: 110;
+      background: #16110a;
+      align-items: flex-start; justify-content: center;
+      overflow-y: auto;
+    }
+    .setup-inner {
+      width: 100%; max-width: 840px;
+      padding: 36px 48px 48px;
+      display: flex; flex-direction: column; gap: 22px;
+    }
+    .setup-title-wrap { text-align: center; padding-bottom: 8px; }
+    .setup-title {
+      color: #c9a84c;
+      font-size: 34px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 8px;
+    }
+    .setup-subtitle {
+      color: #4a3820;
+      font-size: 11px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+    .setup-section {
+      border: 1px solid #261a08;
+      border-radius: 4px;
+      padding: 18px 20px;
+      background: #1a1206;
+    }
+    .setup-section-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: #6a5030;
+      margin-bottom: 14px;
+    }
+    .faction-cards { display: flex; gap: 10px; }
+    .faction-card {
+      flex: 1;
+      padding: 13px 11px;
+      border: 1px solid #261a08;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex; flex-direction: column; gap: 9px;
+      background: #16110a;
+      user-select: none;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .faction-card:hover { border-color: #5a3810; background: #1e1608; }
+    .faction-card.selected { border-color: #c9a84c; background: rgba(201,168,76,0.07); }
+    .faction-card-top { display: flex; align-items: center; gap: 9px; }
+    .faction-swatch { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; }
+    .faction-card-name { color: #c0a870; font-size: 14px; }
+    .faction-card.selected .faction-card-name { color: #e8d090; }
+    .faction-card-trait { color: #4a3820; font-size: 11px; line-height: 1.5; font-style: italic; }
+    .faction-card.selected .faction-card-trait { color: #7a6040; }
+    .option-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .option-btn {
+      padding: 10px 16px;
+      border: 1px solid #261a08;
+      border-radius: 3px;
+      cursor: pointer;
+      background: #16110a;
+      color: #7a6040;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      text-align: left;
+      user-select: none;
+      transition: border-color 0.12s, background 0.12s, color 0.12s;
+    }
+    .option-btn:hover { border-color: #5a3810; color: #c0a870; }
+    .option-btn.selected { border-color: #c9a84c; background: rgba(201,168,76,0.07); color: #e8d090; }
+    .option-btn-desc { font-size: 11px; color: #4a3820; font-style: italic; display: block; margin-top: 3px; }
+    .option-btn.selected .option-btn-desc { color: #6a5030; }
+    #start-game-btn {
+      align-self: center;
+      padding: 13px 60px;
+      background: #3a2810;
+      color: #c9a84c;
+      border: 1px solid #6a4820;
+      border-radius: 3px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 13px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    #start-game-btn:hover { background: #4a3418; border-color: #c9a84c; }
+
     /* ── End Turn button ── */
     #end-turn-btn {
       margin-top: auto;
@@ -255,6 +351,81 @@
 </head>
 <body>
 
+<div id="setup-screen">
+  <div class="setup-inner">
+    <div class="setup-title-wrap">
+      <div class="setup-title">War of Castles</div>
+      <div class="setup-subtitle">Medieval Territory Strategy</div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-label">Choose Your Faction</div>
+      <div class="faction-cards">
+        <div class="faction-card selected" data-faction="0">
+          <div class="faction-card-top">
+            <div class="faction-swatch" style="background:#c97b84"></div>
+            <div class="faction-card-name">Merchants</div>
+          </div>
+          <div class="faction-card-trait">+1 coin per turn</div>
+        </div>
+        <div class="faction-card" data-faction="1">
+          <div class="faction-card-top">
+            <div class="faction-swatch" style="background:#4a7fa5"></div>
+            <div class="faction-card-name">Warriors</div>
+          </div>
+          <div class="faction-card-trait">Attacking armies count as +1 unit in combat</div>
+        </div>
+        <div class="faction-card" data-faction="2">
+          <div class="faction-card-top">
+            <div class="faction-swatch" style="background:#8a9a5b"></div>
+            <div class="faction-card-name">Stoics</div>
+          </div>
+          <div class="faction-card-trait">Defending armies count as +1 unit in combat</div>
+        </div>
+        <div class="faction-card" data-faction="3">
+          <div class="faction-card-top">
+            <div class="faction-swatch" style="background:#5fb3a1"></div>
+            <div class="faction-card-name">Ninjas</div>
+          </div>
+          <div class="faction-card-trait">+1 extra move every 3rd turn (turns 3, 6, 9…)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-label">Victory Condition</div>
+      <div class="option-row">
+        <button class="option-btn selected" data-victory="conquest">
+          Conquest<span class="option-btn-desc">Most regions when turns run out</span>
+        </button>
+        <button class="option-btn" data-victory="economic">
+          Economic Win<span class="option-btn-desc">First to 50 coins ends the game</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-label">Session Mode</div>
+      <div class="option-row">
+        <button class="option-btn" data-turns="9">
+          Quick Skirmish<span class="option-btn-desc">9 turns · ~12 min</span>
+        </button>
+        <button class="option-btn selected" data-turns="12">
+          Standard<span class="option-btn-desc">12 turns · ~20 min</span>
+        </button>
+        <button class="option-btn" data-turns="15">
+          Marathon<span class="option-btn-desc">15 turns · ~30 min</span>
+        </button>
+        <button class="option-btn" data-turns="0">
+          Endless<span class="option-btn-desc">Play until eliminated</span>
+        </button>
+      </div>
+    </div>
+
+    <button id="start-game-btn">Start Game</button>
+  </div>
+</div>
+
 <div id="rotate-prompt">
   <div class="rot-icon">&#8635;</div>
   <div>Rotate your device to landscape to play</div>
@@ -291,7 +462,7 @@
   </div>
 </div>
 
-<div id="app">
+<div id="app" style="display:none">
   <aside id="sidebar">
     <div class="game-title">War of Castles</div>
 
@@ -299,7 +470,7 @@
       <div class="s-label">Turn</div>
       <div class="turn-row">
         <span class="turn-num" id="turn-num">1</span>
-        <span class="turn-of">/ 12</span>
+        <span class="turn-of" id="turn-of"></span>
       </div>
       <div id="active-turn-label" style="color:#c9a84c;font-size:13px;margin-top:8px;letter-spacing:0.5px">Your Turn</div>
     </div>
@@ -566,11 +737,8 @@ function generateMap(cells, seeds, seaSet) {
   return { landRegions, seaRegions, landAdj };
 }
 
-// ─── Generate map ─────────────────────────────────────────────────────────────
-const _nLand = 28 + Math.floor(Math.random()*5);  // 28-32 land regions
-const _nSea  = 2  + Math.floor(Math.random()*3);  // 2-4 sea corridors
-
-const _landSeeds = placeSeeds(_nLand);
+// ─── Map state (populated by initMap / loadGame) ─────────────────────────────
+let landRegions = [], seaRegions = [], landAdj = [];
 
 // Generate elongated sea corridors — each a tight line of seeds whose Voronoi
 // cells clip into thin perpendicular slivers, forming a fjord, strait, or river.
@@ -627,22 +795,30 @@ function genSeaCorridors(nSea, landSeeds) {
   return placed;
 }
 
-const _seaSeeds = genSeaCorridors(_nSea, _landSeeds);
-const _allSeeds = [..._landSeeds, ..._seaSeeds];
-const { cells: _cells, seeds: _seeds } = buildVoronoiCells(_allSeeds);
-
-const _seaKeySet = new Set(_seaSeeds.map(([x,y]) => `${x},${y}`));
-const _seaSet    = new Set(
-  _seeds.reduce((acc,[x,y],i) => { if (_seaKeySet.has(`${x},${y}`)) acc.push(i); return acc; }, [])
-);
-
-const { landRegions, seaRegions, landAdj } = generateMap(_cells, _seeds, _seaSet);
+// Populate the landRegions / seaRegions / landAdj globals for a fresh game.
+function initMap() {
+  const nLand = 28 + Math.floor(Math.random() * 5);
+  const nSea  = 2  + Math.floor(Math.random() * 3);
+  const landSeeds = placeSeeds(nLand);
+  const seaSeeds  = genSeaCorridors(nSea, landSeeds);
+  const allSeeds  = [...landSeeds, ...seaSeeds];
+  const { cells, seeds } = buildVoronoiCells(allSeeds);
+  const seaKeySet = new Set(seaSeeds.map(([x, y]) => `${x},${y}`));
+  const seaSet    = new Set(
+    seeds.reduce((acc, [x, y], i) => { if (seaKeySet.has(`${x},${y}`)) acc.push(i); return acc; }, [])
+  );
+  const result = generateMap(cells, seeds, seaSet);
+  landRegions.length = 0; for (const r of result.landRegions) landRegions.push(r);
+  seaRegions.length  = 0; for (const r of result.seaRegions)  seaRegions.push(r);
+  landAdj.length     = 0; for (const a of result.landAdj)     landAdj.push(a);
+}
 
 // ─── Turn / selection state ───────────────────────────────────────────────────
 const MOVES_PER_TURN = 3;
-const MAX_TURNS      = 12;
+let MAX_TURNS        = 12;
 const FACTION_NAMES  = ['Merchants', 'Warriors', 'Stoics', 'Ninjas'];
-const HUMAN_FACTION  = 0;
+let HUMAN_FACTION    = 0;
+let VICTORY_MODE     = 'conquest'; // 'conquest' | 'economic'
 let currentTurn    = 1;
 let currentFaction = 0;   // 0-3, whose turn it is right now
 let aiTurnActive   = false;
@@ -655,6 +831,7 @@ let splitCount         = 0;         // units committed to next move (set when re
 const coins            = [0, 0, 0, 0]; // coin balance per faction index
 const eliminated       = [false, false, false, false];
 let gameOver           = false;
+let economicWinner     = -1;           // faction index when economic win triggers, else -1
 const RECRUIT_COSTS    = [2, 4, 7, 11, 16];
 let recruitedThisTurn  = 0;         // units recruited by player 0 this turn
 let recruitCastleIdx   = null;      // region index of open recruit panel, or null
@@ -784,7 +961,8 @@ function executeMove(fromIdx, toIdx, onComplete, commitUnits) {
   selectedRegion = null;
   runCombatFlash(toIdx, FACTION_COLORS[attacker], () => {
     if (atkStrength > defStrength) {
-      const survivors = commitUnits - to.units;
+      const atkPhantom = (isCombat && attacker === 1 ? 1 : 0) + (isCombat && richHarvest ? 1 : 0);
+      const survivors = commitUnits - Math.max(0, to.units - atkPhantom);
       resolveAttackerWins(survivors);
       render();
       drawVictoryOverlay(survivors);
@@ -862,7 +1040,7 @@ function drawTieOverlay() {
 // Returns true if the human player can select/activate this land-region index.
 function canSelect(idx) {
   const r = landRegions[idx];
-  return r.owner === 0
+  return r.owner === HUMAN_FACTION
       && r.units > 0
       && !movedRegions.has(idx)
       && movesLeft > 0
@@ -936,16 +1114,26 @@ function showGameOver() {
     if (r.owner !== null) { counts[r.owner]++; if (r.type === 'castle') castleCounts[r.owner]++; }
   }
 
-  const winner   = determineWinner();
+  const winner   = economicWinner >= 0 ? economicWinner : determineWinner();
   const humanWon = winner === HUMAN_FACTION;
 
   const titleEl = document.getElementById('gameover-title');
-  titleEl.textContent = humanWon ? 'Victory!' : 'Defeat';
+  if (economicWinner >= 0) {
+    titleEl.textContent = humanWon ? 'Economic Victory!' : 'Defeat';
+  } else {
+    titleEl.textContent = humanWon ? 'Victory!' : 'Defeat';
+  }
   titleEl.style.color = humanWon ? '#8fbe70' : '#c97b84';
 
-  document.getElementById('gameover-winner').textContent = humanWon
-    ? 'You have conquered the realm!'
-    : (winner === -1 ? 'The realm lies in ruin.' : `${FACTION_NAMES[winner]} have claimed the realm.`);
+  if (economicWinner >= 0) {
+    document.getElementById('gameover-winner').textContent = humanWon
+      ? `You amassed ${coins[HUMAN_FACTION]} coins and claimed economic dominance!`
+      : `${FACTION_NAMES[winner]} reached 50 coins and seized economic control.`;
+  } else {
+    document.getElementById('gameover-winner').textContent = humanWon
+      ? 'You have conquered the realm!'
+      : (winner === -1 ? 'The realm lies in ruin.' : `${FACTION_NAMES[winner]} have claimed the realm.`);
+  }
 
   document.getElementById('gameover-scores').innerHTML = [0, 1, 2, 3].map(fi => {
     const isW = fi === winner, isE = eliminated[fi];
@@ -979,10 +1167,10 @@ function refreshRecruitPanel() {
   const cost = recruitCost();
   document.getElementById('recruit-panel').style.display = 'block';
   document.getElementById('recruit-info').innerHTML =
-    `Balance: <strong>${coins[0]}c</strong><br>Next unit costs: <strong>${cost}c</strong>`;
+    `Balance: <strong>${coins[HUMAN_FACTION]}c</strong><br>Next unit costs: <strong>${cost}c</strong>`;
   const btn = document.getElementById('recruit-btn');
   btn.textContent = `Recruit (${cost}c)`;
-  btn.disabled = coins[0] < cost;
+  btn.disabled = coins[HUMAN_FACTION] < cost;
 }
 
 function endFactionTurn() {
@@ -994,7 +1182,7 @@ function endFactionTurn() {
     const castles  = owned.filter(r => r.type === 'castle');
     const villages = owned.filter(r => r.type === 'village');
     const activeVillages = villages.filter(r => !(r.floodTurnsRemaining > 0) && !r.wildfire);
-    const coinGain = castles.length + activeVillages.length * 2 + (fi === HUMAN_FACTION ? 1 : 0);
+    const coinGain = castles.length + activeVillages.length * 2 + (fi === 0 ? 1 : 0); // faction 0 = Merchants
     coins[fi] += coinGain;
     for (const c of castles) c.units++;
     const bonus = Math.floor(villages.length / 2);
@@ -1007,6 +1195,13 @@ function endFactionTurn() {
       flash.style.display = 'block';
       clearTimeout(incomeFlashTimer);
       incomeFlashTimer = setTimeout(() => { flash.style.display = 'none'; }, 2000);
+    }
+
+    // Economic win — first faction to reach 50 coins ends the game immediately
+    if (VICTORY_MODE === 'economic' && coins[fi] >= 50) {
+      economicWinner = fi;
+      showGameOver();
+      return;
     }
   }
 
@@ -1208,10 +1403,12 @@ const SAVE_KEY = 'woc_save';
 
 function saveGame() {
   const state = {
+    HUMAN_FACTION, MAX_TURNS, VICTORY_MODE,
     currentTurn,
     currentFaction,
     movesLeft,
     recruitedThisTurn,
+    economicWinner,
     coins: coins.slice(),
     movedRegions: [...movedRegions],
     currentEvent,
@@ -1230,6 +1427,10 @@ function saveGame() {
 }
 
 function loadGame(state) {
+  HUMAN_FACTION = state.HUMAN_FACTION ?? 0;
+  MAX_TURNS     = state.MAX_TURNS     ?? 12;
+  VICTORY_MODE  = state.VICTORY_MODE  ?? 'conquest';
+
   landRegions.length = 0;
   for (const r of state.landRegions) landRegions.push(r);
 
@@ -1243,6 +1444,7 @@ function loadGame(state) {
   currentFaction    = state.currentFaction ?? HUMAN_FACTION;
   movesLeft         = state.movesLeft;
   recruitedThisTurn = state.recruitedThisTurn ?? 0;
+  economicWinner    = state.economicWinner ?? -1;
   state.coins.forEach((v, i) => { coins[i] = v; });
   movedRegions.clear();
   for (const i of state.movedRegions) movedRegions.add(i);
@@ -1652,6 +1854,7 @@ function updateSidebar() {
   }
 
   document.getElementById('turn-num').textContent = currentTurn;
+  document.getElementById('turn-of').textContent = MAX_TURNS === Infinity ? '/ ∞' : `/ ${MAX_TURNS}`;
 
   // Whose turn label
   const label = document.getElementById('active-turn-label');
@@ -1668,36 +1871,89 @@ function updateSidebar() {
   btn.disabled = aiTurnActive || currentFaction !== HUMAN_FACTION;
 }
 
-updateSidebar();
+// ─── Game start helpers ───────────────────────────────────────────────────────
+
+function showSetupScreen() {
+  document.getElementById('setup-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function hideSetupScreen() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+
+// Reset all mutable game state and start a fresh game with current settings.
+function beginGame() {
+  currentTurn       = 1;
+  currentFaction    = 0;
+  aiTurnActive      = false;
+  movesLeft         = movesForFaction(0);
+  movedRegions.clear();
+  selectedRegion    = null;
+  combatBlocked     = false;
+  flashState        = null;
+  splitCount        = 0;
+  economicWinner    = -1;
+  gameOver          = false;
+  recruitedThisTurn = 0;
+  recruitCastleIdx  = null;
+  coins.fill(0);
+  eliminated.fill(false);
+  currentEvent = null;
+  lastEventId  = null;
+  richHarvest  = false;
+  wildfireOverlay = null;
+
+  document.getElementById('gameover-screen').style.display = 'none';
+  closeRecruitPanel();
+
+  initMap();
+  hideSetupScreen();
+  resize();
+  drawWorldEvent();
+  updateSidebar();
+  render();
+
+  if (currentFaction !== HUMAN_FACTION) runAiTurn();
+}
 
 // ─── Resume prompt ────────────────────────────────────────────────────────────
-(function checkSave() {
+(function initPage() {
   let raw;
   try { raw = localStorage.getItem(SAVE_KEY); } catch (_) {}
-  if (!raw) { drawWorldEvent(); render(); return; }
 
-  const prompt = document.getElementById('resume-prompt');
-  prompt.style.display = 'flex';
+  if (raw) {
+    // Saved game found — offer resume before showing setup
+    const prompt = document.getElementById('resume-prompt');
+    prompt.style.display = 'flex';
 
-  document.getElementById('resume-yes').addEventListener('click', () => {
-    try {
-      loadGame(JSON.parse(raw));
-    } catch (_) {
+    document.getElementById('resume-yes').addEventListener('click', () => {
+      try {
+        loadGame(JSON.parse(raw));
+      } catch (_) {
+        localStorage.removeItem(SAVE_KEY);
+        prompt.style.display = 'none';
+        showSetupScreen();
+        return;
+      }
+      prompt.style.display = 'none';
+      hideSetupScreen();
+      resize();
+      updateSidebar();
+      updateEventSidebar();
+      render();
+      if (currentFaction !== HUMAN_FACTION) runAiTurn();
+    });
+
+    document.getElementById('resume-no').addEventListener('click', () => {
       localStorage.removeItem(SAVE_KEY);
-    }
-    prompt.style.display = 'none';
-    updateSidebar();
-    updateEventSidebar();
-    render();
-    if (currentFaction !== HUMAN_FACTION) runAiTurn();
-  });
-
-  document.getElementById('resume-no').addEventListener('click', () => {
-    localStorage.removeItem(SAVE_KEY);
-    prompt.style.display = 'none';
-    drawWorldEvent();
-    render();
-  });
+      prompt.style.display = 'none';
+      showSetupScreen();
+    });
+  } else {
+    showSetupScreen();
+  }
 }());
 
 // ─── Canvas interaction ───────────────────────────────────────────────────────
@@ -1711,7 +1967,7 @@ canvas.addEventListener('click', e => {
     closeRecruitPanel();
     executeMove(selectedRegion, hit, undefined, splitCount);
   } else {
-    const isOwnCastle = hit !== -1 && landRegions[hit].owner === 0 && landRegions[hit].type === 'castle';
+    const isOwnCastle = hit !== -1 && landRegions[hit].owner === HUMAN_FACTION && landRegions[hit].type === 'castle';
     if (isOwnCastle) {
       // Own castle — open recruit panel and select for movement
       openRecruitPanel(hit);
@@ -1741,13 +1997,15 @@ document.getElementById('end-turn-btn').addEventListener('click', () => {
 document.getElementById('recruit-btn').addEventListener('click', () => {
   if (recruitCastleIdx === null || combatBlocked) return;
   const cost = recruitCost();
-  if (coins[0] < cost) return;
-  coins[0] -= cost;
+  if (coins[HUMAN_FACTION] < cost) return;
+  coins[HUMAN_FACTION] -= cost;
   landRegions[recruitCastleIdx].units++;
   recruitedThisTurn++;
+  splitCount++;
   refreshRecruitPanel();
   updateSidebar();
   render();
+  positionStepper();
 });
 
 document.getElementById('split-minus').addEventListener('click', () => {
@@ -1773,14 +2031,57 @@ canvas.addEventListener('mousemove', e => {
 
 document.getElementById('gameover-play-again').addEventListener('click', () => {
   try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
-  location.reload();
+  // Replay with the same HUMAN_FACTION / MAX_TURNS / VICTORY_MODE
+  document.getElementById('gameover-screen').style.display = 'none';
+  beginGame();
 });
 
 document.getElementById('gameover-new-game').addEventListener('click', () => {
-  // Iteration 7 will add a setup screen; for now reload like Play Again
   try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
-  location.reload();
+  document.getElementById('gameover-screen').style.display = 'none';
+  showSetupScreen();
 });
+
+// ─── Setup screen interactions ────────────────────────────────────────────────
+(function initSetup() {
+  // Faction card selection
+  document.querySelectorAll('.faction-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.faction-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+    });
+  });
+
+  // Victory condition selection
+  document.querySelectorAll('[data-victory]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-victory]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+  });
+
+  // Session mode selection
+  document.querySelectorAll('[data-turns]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-turns]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+  });
+
+  // Start Game
+  document.getElementById('start-game-btn').addEventListener('click', () => {
+    const factionCard  = document.querySelector('.faction-card.selected');
+    const victoryBtn   = document.querySelector('[data-victory].selected');
+    const turnsBtn     = document.querySelector('[data-turns].selected');
+
+    HUMAN_FACTION = factionCard ? Number(factionCard.dataset.faction) : 0;
+    VICTORY_MODE  = victoryBtn  ? victoryBtn.dataset.victory           : 'conquest';
+    const turns   = turnsBtn    ? Number(turnsBtn.dataset.turns)       : 12;
+    MAX_TURNS     = turns === 0 ? Infinity : turns;
+
+    beginGame();
+  });
+}());
 </script>
 </body>
 </html>
