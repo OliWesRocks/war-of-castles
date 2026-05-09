@@ -1157,6 +1157,7 @@ function showGameOver() {
     const isW = fi === winner, isE = eliminated[fi];
     return `<div class="score-row${isW ? ' winner' : ''}">` +
       `<div class="score-dot" style="background:${FACTION_COLORS[fi]}"></div>` +
+      `${isW ? '<span style="font-size:13px;line-height:1">👑</span>' : ''}` +
       `<div class="score-name">${FACTION_NAMES[fi]}${isE ? ' <em style="color:#4a3020;font-size:11px">(eliminated)</em>' : ''}</div>` +
       `<div class="score-stats">${counts[fi]} rgn · ${castleCounts[fi]} castle · ${coins[fi]}c</div>` +
       `</div>`;
