@@ -1134,6 +1134,7 @@ function executeMove(fromIdx, toIdx, onComplete, commitUnits) {
           if (shouldEnd) { showGameOver(); return; }
           render();
           updateSidebar();
+          if (attacker === HUMAN_FACTION && to.type === 'empty') openPalisadePanel(toIdx);
           if (onComplete) onComplete();
         });
       }, 1000);
