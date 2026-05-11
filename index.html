@@ -1434,8 +1434,9 @@ function endFactionTurn() {
 
 // ─── AI ──────────────────────────────────────────────────────────────────────
 
-// Spend coins at the start of an AI turn: always buy 1st unit (2c), buy 2nd if
-// starting coins were > 8 (cost 4), never buy 3rd+.
+// Spend coins at the start of an AI turn: buy up to 3 units while affordable.
+// Units go to the most front-line castle (most non-owned adjacent regions);
+// ties broken by fewest existing units to reinforce weaker positions.
 function aiRecruit(fi) {
   const castleIdxs = landRegions.reduce((a, r, i) => {
     if (r.owner === fi && r.type === 'castle') a.push(i);
@@ -1443,16 +1444,21 @@ function aiRecruit(fi) {
   }, []);
   if (!castleIdxs.length) return;
 
-  const startCoins = coins[fi];
-  if (startCoins >= RECRUIT_COSTS[0]) {
-    const idx = castleIdxs[Math.floor(Math.random() * castleIdxs.length)];
-    coins[fi] -= RECRUIT_COSTS[0];
-    landRegions[idx].units++;
-  }
-  if (startCoins > 8 && coins[fi] >= RECRUIT_COSTS[1]) {
-    const idx = castleIdxs[Math.floor(Math.random() * castleIdxs.length)];
-    coins[fi] -= RECRUIT_COSTS[1];
-    landRegions[idx].units++;
+  castleIdxs.sort((a, b) => {
+    const scoreA = landAdj[a].filter(j => landRegions[j].owner !== fi).length;
+    const scoreB = landAdj[b].filter(j => landRegions[j].owner !== fi).length;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return landRegions[a].units - landRegions[b].units;
+  });
+  const target = castleIdxs[0];
+
+  let recruited = 0;
+  while (recruited < 3) {
+    const cost = RECRUIT_COSTS[Math.min(recruited, RECRUIT_COSTS.length - 1)];
+    if (coins[fi] < cost) break;
+    coins[fi] -= cost;
+    landRegions[target].units++;
+    recruited++;
   }
 }
 
@@ -1496,12 +1502,10 @@ function aiPickBestMove(fi) {
   return best;
 }
 
-// BFS from startIdx across land; returns the index of the first step toward the
-// nearest enemy castle owned by a faction other than fi, or null if none reachable.
-// Impassable regions (flooded / wildfire) are excluded from the search.
-function aiBfsStepTowardEnemyCastle(startIdx, fi) {
+// BFS from startIdx; returns the first step toward the nearest region matching
+// isTarget(region). Impassable regions are excluded from traversal.
+function aiBfsStep(startIdx, isTarget) {
   const visited = new Set([startIdx]);
-  // Seed queue with direct neighbors; each entry: [currentIdx, firstStepIdx]
   const queue = [];
   for (const nxt of landAdj[startIdx]) {
     const r = landRegions[nxt];
@@ -1512,10 +1516,7 @@ function aiBfsStepTowardEnemyCastle(startIdx, fi) {
   }
   while (queue.length) {
     const [cur, firstStep] = queue.shift();
-    const curR = landRegions[cur];
-    if (curR.type === 'castle' && curR.owner !== null && curR.owner !== fi) {
-      return firstStep;
-    }
+    if (isTarget(landRegions[cur])) return firstStep;
     for (const nxt of landAdj[cur]) {
       if (visited.has(nxt)) continue;
       const r = landRegions[nxt];
@@ -1527,10 +1528,11 @@ function aiBfsStepTowardEnemyCastle(startIdx, fi) {
   return null;
 }
 
-// Fallback: move the AI's largest army one step toward the nearest enemy castle.
-// Only fires when aiPickBestMove found nothing worth doing this move.
+// Fallback: move the AI's largest army one step toward the nearest valuable target.
+// Targets in priority order: enemy castle > neutral castle or any village.
+// Allows stepping through own territory to reach the front line (fix: no longer
+// skips armies whose first step is own territory).
 function aiMarchFallback(fi) {
-  // Collect all eligible armies, largest first, then try each until one can march.
   const candidates = [];
   for (let i = 0; i < landRegions.length; i++) {
     const r = landRegions[i];
@@ -1541,17 +1543,18 @@ function aiMarchFallback(fi) {
   candidates.sort((a, b) => landRegions[b].units - landRegions[a].units);
 
   for (const fromIdx of candidates) {
-    const toIdx = aiBfsStepTowardEnemyCastle(fromIdx, fi);
+    const toIdx =
+      aiBfsStep(fromIdx, r => r.type === 'castle' && r.owner !== null && r.owner !== fi) ||
+      aiBfsStep(fromIdx, r => r.owner !== fi && (r.type === 'castle' || r.type === 'village'));
     if (toIdx === null) continue;
 
     const to = landRegions[toIdx];
-    if (to.owner === fi) continue; // first step blocked by own territory — try next army
     if (to.floodTurnsRemaining > 0 || to.wildfire) continue;
-    if (to.owner !== null) {
+    if (to.owner !== fi) {
       const from = landRegions[fromIdx];
       const atkStrength = from.units + (fi === 1 ? 1 : 0) + (richHarvest ? 1 : 0);
       const defStrength = to.units + (to.hasPalisade ? 1 : 0) + (to.owner === 2 ? 1 : 0);
-      if (atkStrength <= defStrength) continue; // would lose — try next army
+      if (atkStrength <= defStrength) continue;
     }
 
     return { fromIdx, toIdx };
@@ -1561,6 +1564,7 @@ function aiMarchFallback(fi) {
 
 // Execute one AI move; once the animation resolves, wait 600ms then pick next.
 function aiDoNextMove(fi) {
+  if (gameOver)       { aiTurnActive = false; return; }
   if (movesLeft <= 0) { aiTurnActive = false; endFactionTurn(); return; }
   const move = aiPickBestMove(fi) || aiMarchFallback(fi);
   if (!move)          { aiTurnActive = false; endFactionTurn(); return; }
@@ -1569,26 +1573,32 @@ function aiDoNextMove(fi) {
   // player can see where the attack came from. executeMove clears
   // selectedRegion synchronously; we restore it right after so the first
   // flash tick (queued via setTimeout) still sees it.
+  const movingIntoOwn = landRegions[move.toIdx].owner === fi;
   executeMove(move.fromIdx, move.toIdx, () => {
+    if (movingIntoOwn) movedRegions.add(move.toIdx); // prevent conga-line: one march per region per turn
     setTimeout(() => aiDoNextMove(fi), 600);
   });
   selectedRegion = move.fromIdx; // restore after executeMove clears it
 }
 
 function aiPalisade(fi) {
-  if (coins[fi] < 3 || palisadeCount(fi) >= 3) return;
-  for (let i = 0; i < landRegions.length; i++) {
-    const r = landRegions[i];
-    if (r.owner !== fi || r.type !== 'empty' || r.hasPalisade) continue;
-    const adjacentToEnemy = landAdj[i].some(j => {
-      const n = landRegions[j];
-      return n.owner !== null && n.owner !== fi;
-    });
-    if (adjacentToEnemy) {
-      r.hasPalisade = true;
-      coins[fi] -= 3;
-      return;
+  while (coins[fi] >= 3 && palisadeCount(fi) < 3) {
+    let placed = false;
+    for (let i = 0; i < landRegions.length; i++) {
+      const r = landRegions[i];
+      if (r.owner !== fi || r.type !== 'empty' || r.hasPalisade) continue;
+      const adjacentToEnemy = landAdj[i].some(j => {
+        const n = landRegions[j];
+        return n.owner !== null && n.owner !== fi;
+      });
+      if (adjacentToEnemy) {
+        r.hasPalisade = true;
+        coins[fi] -= 3;
+        placed = true;
+        break;
+      }
     }
+    if (!placed) break;
   }
 }
 
