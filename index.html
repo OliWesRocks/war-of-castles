@@ -244,13 +244,37 @@
     /* ── Portrait guard ── */
     #rotate-prompt {
       display: none;
-      position: fixed; inset: 0; z-index: 100;
-      background: #16110a; color: #c9a84c;
+      position: fixed; inset: 0; z-index: 200;
+      background: #1a1410; color: #c9963a;
       font-family: Georgia, serif;
       flex-direction: column; align-items: center; justify-content: center;
-      gap: 16px; font-size: 18px; text-align: center; padding: 40px;
+      gap: 24px; font-size: 18px; text-align: center; padding: 40px;
     }
-    .rot-icon { font-size: 56px; }
+    #rotate-prompt.visible { display: flex; }
+    .rot-icon {
+      width: 64px; height: 64px;
+      position: relative;
+    }
+    .rot-phone {
+      width: 28px; height: 46px;
+      border: 3px solid #c9963a;
+      border-radius: 5px;
+      position: absolute; top: 9px; left: 4px;
+    }
+    .rot-arrow {
+      position: absolute; top: 0; right: 0;
+      width: 30px; height: 30px;
+      border: 3px solid #c9963a;
+      border-bottom: none; border-left: none;
+      border-radius: 0 10px 0 0;
+    }
+    .rot-arrow::after {
+      content: '';
+      position: absolute; bottom: -9px; right: -6px;
+      border: 6px solid transparent;
+      border-top: 8px solid #c9963a;
+      transform: rotate(45deg);
+    }
 
     @media (orientation: portrait) {
       #app { display: none; }
@@ -359,6 +383,19 @@
       cursor: pointer;
     }
     #start-game-btn:hover { background: #4a3418; border-color: #c9a84c; }
+    #howto-btn-setup {
+      align-self: center;
+      background: none; border: none;
+      color: #6a5030;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 4px 8px;
+      margin-top: -6px;
+    }
+    #howto-btn-setup:hover { color: #c9a84c; }
 
     /* ── End Turn button ── */
     #end-turn-btn {
@@ -524,13 +561,17 @@
       <hr class="setup-sep">
 
       <button id="start-game-btn">Start Game</button>
+      <button id="howto-btn-setup">How to Play</button>
     </div>
   </div>
 </div>
 
 <div id="rotate-prompt">
-  <div class="rot-icon">&#8635;</div>
-  <div>Rotate your device to landscape to play</div>
+  <div class="rot-icon">
+    <div class="rot-phone"></div>
+    <div class="rot-arrow"></div>
+  </div>
+  <div>Please rotate your device to play</div>
 </div>
 
 <div id="gameover-screen">
@@ -2255,6 +2296,9 @@ document.getElementById('end-turn-btn').addEventListener('click', () => {
 document.getElementById('howto-btn').addEventListener('click', () => {
   document.getElementById('howto-screen').classList.add('open');
 });
+document.getElementById('howto-btn-setup').addEventListener('click', () => {
+  document.getElementById('howto-screen').classList.add('open');
+});
 document.getElementById('howto-close').addEventListener('click', () => {
   document.getElementById('howto-screen').classList.remove('open');
 });
@@ -2362,6 +2406,16 @@ document.getElementById('gameover-new-game').addEventListener('click', () => {
 
     beginGame();
   });
+
+  // ── Portrait orientation guard ─────────────────────────────────────────────
+  function checkOrientation() {
+    const portrait = window.innerHeight > window.innerWidth;
+    document.getElementById('rotate-prompt').classList.toggle('visible', portrait);
+    document.getElementById('app').style.visibility = portrait ? 'hidden' : '';
+  }
+  window.addEventListener('resize', checkOrientation);
+  window.addEventListener('orientationchange', checkOrientation);
+  checkOrientation();
 }());
 </script>
 </body>
