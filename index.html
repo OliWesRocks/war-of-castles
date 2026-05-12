@@ -2015,7 +2015,7 @@ function applyFloodEvent() {
 // Returns the number of units killed (0 when a neutral region is targeted).
 function applyWildfireEvent() {
   const neutral  = landRegions.reduce((a, r, i) => { if (r.owner === null && !r.wildfire) a.push(i); return a; }, []);
-  const occupied = landRegions.reduce((a, r, i) => { if (r.owner !== null && !r.wildfire) a.push(i); return a; }, []);
+  const occupied = landRegions.reduce((a, r, i) => { if (r.owner !== null && r.units > 0 && !r.wildfire) a.push(i); return a; }, []);
 
   if (neutral.length > 0) {
     const idx = neutral[Math.floor(Math.random() * neutral.length)];
