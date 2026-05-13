@@ -1,0 +1,14 @@
+Castles at War
+Conquer the medieval world one region at a time in this turn-based territory strategy game.
+Every game begins on a freshly generated map — no two wars are ever the same. Expand your kingdom by seizing villages for taxes and castles for recruiting armies, then crush your rivals before time runs out.
+Choose your faction and play to your strengths: Merchants grow rich fast, Warriors hit harder in battle, Stoics are stronger at defence, and Ninjas get extra move. Outsmart three AI opponents across a unique procedurally generated landscape every time you play.
+While you pursue dominance over the map, the world has its own plans. Floods cut off coastal regions, wildfires sweep through inland regions devastating stationed armies, and a Rich Harvest makes all attacking armies stronger.
+
+Features:
+Procedurally generated maps — a new battlefield every game
+4 asymmetric factions with unique passives
+Deterministic combat with a twist of fate on tied battles
+World event system that affects the map each round
+Four session lengths: Quick Skirmish, Standard, and Marathon
+Two victory paths: Conquest or Economic dominance
+Auto-save — pick up exactly where you left off

@@ -60,6 +60,7 @@
     }
     .f-name { color: #c0a870; font-size: 14px; flex: 1; }
     .f-meta { color: #6a5030; font-size: 12px; }
+    .coin-icon { width: 1em; height: 1em; vertical-align: middle; margin-bottom: 0.1em; margin-left: 3px; display: inline-block; border-radius: 50%; }
 
     .event-box {
       border: 1px dashed #2a1e0a; border-radius: 3px;
@@ -132,6 +133,7 @@
     #recruit-btn {
       width: 100%;
       padding: 9px;
+      min-height: 44px;
       background: #1e3a18;
       color: #8fbe70;
       border: 1px solid #3a6828;
@@ -149,6 +151,7 @@
     #palisade-btn {
       width: 100%;
       padding: 9px;
+      min-height: 44px;
       background: #16281e;
       color: #70a888;
       border: 1px solid #2a5038;
@@ -170,6 +173,7 @@
     #howto-btn {
       position: absolute; top: 10px; right: 10px; z-index: 60;
       padding: 6px 14px;
+      min-height: 44px; min-width: 44px;
       background: #1a1206;
       color: #c9a84c;
       border: 1px solid #6a4820;
@@ -231,6 +235,8 @@
       color: #6a5030; font-size: 20px;
       cursor: pointer; line-height: 1;
       font-family: Georgia, 'Times New Roman', serif;
+      min-width: 44px; min-height: 44px;
+      display: flex; align-items: center; justify-content: center;
     }
     .howto-close:hover { color: #c9a84c; }
 
@@ -251,7 +257,7 @@
       pointer-events: all;
     }
     .split-btn {
-      width: 22px; height: 22px;
+      min-width: 44px; min-height: 44px;
       background: #3a2810; color: #c9a84c;
       border: 1px solid #6a4820; border-radius: 2px;
       cursor: pointer; font-size: 17px;
@@ -374,6 +380,7 @@
     .option-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .option-btn {
       padding: 10px 16px;
+      min-height: 44px;
       border: 1px solid #261a08;
       border-radius: 3px;
       cursor: pointer;
@@ -393,6 +400,7 @@
     #start-game-btn {
       align-self: center;
       padding: 13px 60px;
+      min-height: 44px;
       background: #3a2810;
       color: #c9a84c;
       border: 1px solid #6a4820;
@@ -414,6 +422,7 @@
       text-transform: uppercase;
       cursor: pointer;
       padding: 4px 8px;
+      min-height: 44px; min-width: 44px;
       margin-top: -6px;
     }
     #howto-btn-setup:hover { color: #c9a84c; }
@@ -423,6 +432,7 @@
       margin-top: auto;
       width: 100%;
       padding: 10px;
+      min-height: 44px;
       background: #3a2810;
       color: #c9a84c;
       border: 1px solid #6a4820;
@@ -441,8 +451,9 @@
       display: none;
       position: fixed; inset: 0; z-index: 90;
       background: rgba(22, 17, 10, 0.92);
-      align-items: center; justify-content: center;
+      flex-direction: column; align-items: center; justify-content: center; gap: 24px;
     }
+    #cg-banner-container { flex-shrink: 0; }
     .gameover-box {
       background: #1a1206;
       border: 2px solid #7a5a1a;
@@ -468,7 +479,7 @@
     .score-row.winner .score-stats { color: #a88840; }
     .gameover-btns { display: flex; gap: 16px; margin-top: 8px; }
     .gameover-btn {
-      padding: 11px 28px; background: #3a2810; color: #c9a84c;
+      padding: 11px 28px; min-height: 44px; background: #3a2810; color: #c9a84c;
       border: 1px solid #6a4820; border-radius: 3px;
       font-family: Georgia, 'Times New Roman', serif;
       font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer;
@@ -491,7 +502,7 @@
     .resume-sub   { color: #7a6040; font-size: 11px; }
     .resume-btns  { display: flex; gap: 12px; justify-content: center; margin-top: 6px; }
     .resume-btn {
-      padding: 9px 22px; background: #3a2810; color: #c9a84c;
+      padding: 9px 22px; min-height: 44px; background: #3a2810; color: #c9a84c;
       border: 1px solid #6a4820; border-radius: 3px;
       font-family: Georgia, 'Times New Roman', serif;
       font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer;
@@ -606,6 +617,7 @@
       <button class="gameover-btn" id="gameover-new-game">New Game</button>
     </div>
   </div>
+  <div id="cg-banner-container" style="display:none; width:728px; height:90px;"></div>
 </div>
 
 <div id="resume-prompt">
@@ -669,22 +681,22 @@
         <div class="faction-row" data-faction="0">
           <div class="f-dot" style="background:#c97b84"></div>
           <div class="f-name">Merchants</div>
-          <div class="f-meta">— rgn · 0c</div>
+          <div class="f-meta">— rgn · 0<img class="coin-icon" src="images/coin.png" alt="c"></div>
         </div>
         <div class="faction-row" data-faction="1">
           <div class="f-dot" style="background:#4a7fa5"></div>
           <div class="f-name">Warriors</div>
-          <div class="f-meta">— rgn · 0c</div>
+          <div class="f-meta">— rgn · 0<img class="coin-icon" src="images/coin.png" alt="c"></div>
         </div>
         <div class="faction-row" data-faction="2">
           <div class="f-dot" style="background:#8a9a5b"></div>
           <div class="f-name">Stoics</div>
-          <div class="f-meta">— rgn · 0c</div>
+          <div class="f-meta">— rgn · 0<img class="coin-icon" src="images/coin.png" alt="c"></div>
         </div>
         <div class="faction-row" data-faction="3">
           <div class="f-dot" style="background:#5fb3a1"></div>
           <div class="f-name">Ninjas</div>
-          <div class="f-meta">— rgn · 0c</div>
+          <div class="f-meta">— rgn · 0<img class="coin-icon" src="images/coin.png" alt="c"></div>
         </div>
       </div>
     </div>
@@ -711,7 +723,7 @@
       <hr class="sep">
       <div class="s-section">
         <div class="s-label">Fortify</div>
-        <button id="palisade-btn">Build Palisade (3c)</button>
+        <button id="palisade-btn">Build Palisade (3<img class="coin-icon" src="images/coin.png" alt="c">)</button>
       </div>
     </div>
 
@@ -768,6 +780,8 @@
 
 <script>
 'use strict';
+
+const COIN = '<img class="coin-icon" src="images/coin.png" alt="c">';
 
 // ─── CrazyGames SDK helpers ───────────────────────────────────────────────────
 let _sdkGameplayActive = false;
@@ -1145,6 +1159,23 @@ function hitLandRegion(lpx, lpy) {
   return -1;
 }
 
+// Fallback hit test: finds the nearest region centroid within 22 CSS pixels of
+// the tap. Used when the exact polygon test misses (small region on mobile).
+function nearestRegionFallback(lpx, lpy) {
+  const rect = canvas.getBoundingClientRect();
+  const minR2 = (22 * LW / rect.width) ** 2;
+  let best = -1, bestD = minR2;
+  for (let i = 0; i < landRegions.length; i++) {
+    const pts = landRegions[i].pts;
+    let lx = 0, ly = 0;
+    for (const p of pts) { lx += p[0]; ly += p[1]; }
+    lx /= pts.length; ly /= pts.length;
+    const d = (lpx - lx) ** 2 + (lpy - ly) ** 2;
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
+}
+
 // Flash the contested region 4 times (~640 ms), then call onDone.
 function runCombatFlash(idx, color, onDone) {
   const STEPS = 8, INTERVAL = 80;
@@ -1443,11 +1474,22 @@ function showGameOver() {
       `<div class="score-dot" style="background:${FACTION_COLORS[fi]}"></div>` +
       `${isW ? '<span style="font-size:13px;line-height:1">👑</span>' : ''}` +
       `<div class="score-name">${FACTION_NAMES[fi]}${isE ? ' <em style="color:#4a3020;font-size:11px">(eliminated)</em>' : ''}</div>` +
-      `<div class="score-stats">${counts[fi]} rgn · ${castleCounts[fi]} castle · ${coins[fi]}c</div>` +
+      `<div class="score-stats">${counts[fi]} rgn · ${castleCounts[fi]} castle · ${coins[fi]}${COIN}</div>` +
       `</div>`;
   }).join('');
 
   document.getElementById('gameover-screen').style.display = 'flex';
+
+  (async () => {
+    const bannerEl = document.getElementById('cg-banner-container');
+    bannerEl.style.display = 'block';
+    try {
+      await window.CrazyGames.SDK.banner.requestBanner({ id: 'cg-banner-container', width: 728, height: 90 });
+    } catch (e) {
+      console.log('Banner error', e);
+      bannerEl.style.display = 'none';
+    }
+  })();
 }
 
 // ─── Recruitment panel ───────────────────────────────────────────────────────
@@ -1491,9 +1533,9 @@ function refreshRecruitPanel() {
   const cost = recruitCost();
   document.getElementById('recruit-panel').style.display = 'block';
   document.getElementById('recruit-info').innerHTML =
-    `Balance: <strong>${coins[HUMAN_FACTION]}c</strong><br>Next unit costs: <strong>${cost}c</strong>`;
+    `Balance: <strong>${coins[HUMAN_FACTION]}${COIN}</strong><br>Next unit costs: <strong>${cost}${COIN}</strong>`;
   const btn = document.getElementById('recruit-btn');
-  btn.textContent = `Recruit (${cost}c)`;
+  btn.innerHTML = `Recruit (${cost}${COIN})`;
   btn.disabled = coins[HUMAN_FACTION] < cost;
 }
 
@@ -2229,13 +2271,9 @@ function updateSidebar() {
     if (eliminated[fi]) {
       row.style.opacity = '0.3';
       row.querySelector('.f-name').style.color = '#4a3020';
-      row.querySelector('.f-meta').textContent = 'Eliminated';
+      row.querySelector('.f-meta').innerHTML = 'Eliminated';
     } else {
-      const pc   = palisadeCount(fi);
-      const meta = pc > 0
-        ? `${counts[fi]} rgn · ${coins[fi]}c · ${pc} palisade${pc !== 1 ? 's' : ''}`
-        : `${counts[fi]} rgn · ${coins[fi]}c`;
-      row.querySelector('.f-meta').textContent = meta;
+      row.querySelector('.f-meta').innerHTML = `${counts[fi]} rgn · ${coins[fi]}${COIN}`;
       row.style.opacity = fi === currentFaction ? '1' : '0.5';
       row.querySelector('.f-name').style.color = fi === currentFaction ? '#e8d090' : '#c0a870';
     }
@@ -2367,7 +2405,8 @@ function beginGame() {
 canvas.addEventListener('click', e => {
   if (combatBlocked || aiTurnActive || currentFaction !== HUMAN_FACTION || gameOver) return;
   const [lpx, lpy] = logicalFromEvent(e);
-  const hit = hitLandRegion(lpx, lpy);
+  let hit = hitLandRegion(lpx, lpy);
+  if (hit === -1) hit = nearestRegionFallback(lpx, lpy);
 
   if (selectedRegion !== null && hit !== -1 && landAdj[selectedRegion].includes(hit) && isValidMoveTarget(hit)) {
     // Moving into adjacent region — close panels, execute move with committed split
@@ -2472,7 +2511,8 @@ document.getElementById('palisade-btn').addEventListener('click', () => {
 canvas.addEventListener('mousemove', e => {
   if (aiTurnActive || currentFaction !== HUMAN_FACTION || gameOver) { canvas.style.cursor = 'default'; return; }
   const [lpx, lpy] = logicalFromEvent(e);
-  const hit = hitLandRegion(lpx, lpy);
+  let hit = hitLandRegion(lpx, lpy);
+  if (hit === -1) hit = nearestRegionFallback(lpx, lpy);
   const isSelectable  = hit !== -1 && canSelect(hit);
   const isValidTarget = hit !== -1 && selectedRegion !== null && landAdj[selectedRegion].includes(hit) && isValidMoveTarget(hit);
   const isOwnEmpty    = hit !== -1 && landRegions[hit].owner === HUMAN_FACTION && landRegions[hit].type === 'empty';
@@ -2481,6 +2521,8 @@ canvas.addEventListener('mousemove', e => {
 
 document.getElementById('gameover-play-again').addEventListener('click', () => {
   try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
+  try { window.CrazyGames.SDK.banner.clearBanner('cg-banner-container'); } catch (_) {}
+  document.getElementById('cg-banner-container').style.display = 'none';
   // Replay with the same HUMAN_FACTION / MAX_TURNS / VICTORY_MODE
   document.getElementById('gameover-screen').style.display = 'none';
   beginGame();
@@ -2488,6 +2530,8 @@ document.getElementById('gameover-play-again').addEventListener('click', () => {
 
 document.getElementById('gameover-new-game').addEventListener('click', () => {
   try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
+  try { window.CrazyGames.SDK.banner.clearBanner('cg-banner-container'); } catch (_) {}
+  document.getElementById('cg-banner-container').style.display = 'none';
   document.getElementById('gameover-screen').style.display = 'none';
   showSetupScreen();
 });
