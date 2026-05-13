@@ -72,30 +72,51 @@
     .event-box-desc { color: #6a5030; font-size: 11px; font-style: italic; line-height: 1.5; }
 
     /* ── Event card overlay ── */
+    /* ── Event card flip ── */
     #event-card {
       display: none;
       position: fixed; inset: 0; z-index: 80;
-      pointer-events: none;
       align-items: center; justify-content: center;
-      background: rgba(22, 17, 10, 0.55);
+      background: rgba(22, 17, 10, 0.72);
     }
-    .event-card-inner {
+    #event-card.ec-visible { display: flex; }
+    .ec-scene { perspective: 900px; }
+    .ec-flipper {
+      width: 240px; height: 340px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.4s ease-in-out, opacity 0.3s ease;
+    }
+    .ec-flipper.ec-flipped { transform: rotateY(180deg); }
+    .ec-flipper.ec-fade    { opacity: 0; }
+    .ec-face {
+      position: absolute; inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 10px;
+      border: 1px solid #7a5a1a;
       background: #1a1206;
+      box-shadow: 0 8px 60px rgba(0,0,0,0.85);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    }
+    .ec-front {
       border: 2px solid #7a5a1a;
-      border-radius: 8px;
-      padding: 32px 56px;
-      text-align: center;
-      display: flex; flex-direction: column; align-items: center; gap: 12px;
-      box-shadow: 0 0 80px rgba(0, 0, 0, 0.8);
-      animation: eventCardIn 0.35s ease-out;
+      background-image:
+        repeating-linear-gradient( 45deg, rgba(122,90,26,0.10) 0, rgba(122,90,26,0.10) 1px, transparent 1px, transparent 11px),
+        repeating-linear-gradient(-45deg, rgba(122,90,26,0.10) 0, rgba(122,90,26,0.10) 1px, transparent 1px, transparent 11px);
+      gap: 10px;
     }
-    .event-card-emoji { font-size: 56px; line-height: 1; }
-    .event-card-label { color: #6a5030; font-size: 9px; letter-spacing: 3px; text-transform: uppercase; }
-    .event-card-name  { color: #e8d090; font-size: 26px; letter-spacing: 1px; }
-    @keyframes eventCardIn {
-      from { opacity: 0; transform: scale(0.85); }
-      to   { opacity: 1; transform: scale(1); }
+    .ec-front-ornament { color: #7a5a1a; font-size: 28px; line-height: 1; }
+    .ec-front-title { color: #5a4020; font-size: 9px; letter-spacing: 4px; text-transform: uppercase; }
+    .ec-back {
+      transform: rotateY(180deg);
+      padding: 28px 24px;
+      gap: 14px;
     }
+    .ec-back-sup   { color: #6a5030; font-size: 9px; letter-spacing: 3px; text-transform: uppercase; }
+    .ec-back-emoji { font-size: 60px; line-height: 1; }
+    .ec-back-name  { color: #e8d090; font-size: 22px; letter-spacing: 1px; text-align: center; }
+    .ec-back-desc  { color: #a89070; font-size: 12px; line-height: 1.65; text-align: center; }
 
     /* ── Income flash ── */
     #income-flash {
@@ -599,10 +620,20 @@
 </div>
 
 <div id="event-card">
-  <div class="event-card-inner">
-    <div class="event-card-emoji"></div>
-    <div class="event-card-label">World Event</div>
-    <div class="event-card-name"></div>
+  <div class="ec-scene">
+    <div class="ec-flipper">
+      <div class="ec-face ec-front">
+        <div class="ec-front-ornament">✦</div>
+        <div class="ec-front-title">World Event</div>
+        <div class="ec-front-ornament">✦</div>
+      </div>
+      <div class="ec-face ec-back">
+        <div class="ec-back-sup"></div>
+        <div class="ec-back-emoji"></div>
+        <div class="ec-back-name"></div>
+        <div class="ec-back-desc"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1256,6 +1287,57 @@ function drawTieOverlay() {
   drawCombatOverlay('Evenly matched!  Fate decides…', '#f5e6c8');
 }
 
+// Slide a unit token from fromIdx centroid to toIdx centroid over 200ms,
+// then call onDone. Calls render() each frame so the map stays sharp beneath.
+function animateMovingToken(fromIdx, toIdx, color, onDone) {
+  const [x0, y0] = centroid(landRegions[fromIdx].pts);
+  const [x1, y1] = centroid(landRegions[toIdx].pts);
+  const DURATION  = 200;
+  const start     = performance.now();
+
+  function frame(now) {
+    try {
+      const raw  = Math.min((now - start) / DURATION, 1);
+      const ease = raw < 0.5 ? 2 * raw * raw : -1 + (4 - 2 * raw) * raw;
+      render();
+      const cx = x0 + (x1 - x0) * ease;
+      const cy = y0 + (y1 - y0) * ease;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      if (raw < 1) { requestAnimationFrame(frame); return; }
+    } catch (_) {}
+    onDone();
+  }
+  requestAnimationFrame(frame);
+}
+
+// Play the slide animation then execute the move. Blocks input during animation
+// via combatBlocked; executeMove manages the flag from that point onward.
+function animatedMove(fromIdx, toIdx, onComplete, commitUnits) {
+  const color = FACTION_COLORS[landRegions[fromIdx].owner];
+  combatBlocked = true;
+  const afterMove = () => {
+    executeMove(fromIdx, toIdx, onComplete, commitUnits);
+    render();
+    updateSidebar();
+    positionStepper();
+  };
+  try {
+    animateMovingToken(fromIdx, toIdx, color, () => {
+      combatBlocked = false;
+      afterMove();
+    });
+  } catch (_) {
+    combatBlocked = false;
+    afterMove();
+  }
+}
+
 // Returns true if the human player can select/activate this land-region index.
 function canSelect(idx) {
   const r = landRegions[idx];
@@ -1467,6 +1549,15 @@ function endFactionTurn() {
       if (!eliminated[nextFaction]) break;
     }
 
+    const continueToNextTurn = () => {
+      currentFaction = nextFaction;
+      movesLeft = movesForFaction(currentFaction);
+      updateSidebar();
+      render();
+      saveGame();
+      if (currentFaction !== HUMAN_FACTION) runAiTurn();
+    };
+
     if (roundEnded) {
       for (const r of landRegions) {
         if (r.floodTurnsRemaining > 0) r.floodTurnsRemaining--;
@@ -1474,17 +1565,11 @@ function endFactionTurn() {
       }
       currentTurn++;
       if (currentTurn > MAX_TURNS) { showGameOver(); return; }
-      drawWorldEvent();
+      drawWorldEvent(continueToNextTurn);
+      return;
     }
 
-    currentFaction = nextFaction;
-    movesLeft = movesForFaction(currentFaction);
-
-    updateSidebar();
-    render();
-    saveGame();
-
-    if (currentFaction !== HUMAN_FACTION) runAiTurn();
+    continueToNextTurn();
   });
 }
 
@@ -1630,11 +1715,11 @@ function aiDoNextMove(fi) {
   // selectedRegion synchronously; we restore it right after so the first
   // flash tick (queued via setTimeout) still sees it.
   const movingIntoOwn = landRegions[move.toIdx].owner === fi;
-  executeMove(move.fromIdx, move.toIdx, () => {
+  animatedMove(move.fromIdx, move.toIdx, () => {
     if (movingIntoOwn) movedRegions.add(move.toIdx); // prevent conga-line: one march per region per turn
     setTimeout(() => aiDoNextMove(fi), 600);
   });
-  selectedRegion = move.fromIdx; // restore after executeMove clears it
+  selectedRegion = move.fromIdx; // highlight source during the 200ms slide animation
 }
 
 function aiPalisade(fi) {
@@ -2028,22 +2113,39 @@ function updateEventSidebar() {
     `<div class="event-box-desc">${currentEvent.desc}</div>`;
 }
 
-function showEventCard(event) {
-  const card = document.getElementById('event-card');
-  card.querySelector('.event-card-emoji').textContent = event.emoji;
-  card.querySelector('.event-card-label').textContent = 'World Event';
-  card.querySelector('.event-card-name').textContent  = event.name;
-  card.style.display = 'flex';
-  setTimeout(() => { card.style.display = 'none'; }, 2000);
+function showEventCard(event, onDone) {
+  const overlay = document.getElementById('event-card');
+  const flipper = overlay.querySelector('.ec-flipper');
+
+  overlay.querySelector('.ec-back-sup').textContent   = 'World Event';
+  overlay.querySelector('.ec-back-emoji').textContent = event.emoji;
+  overlay.querySelector('.ec-back-name').textContent  = event.name;
+  overlay.querySelector('.ec-back-desc').textContent  = event.desc || '';
+
+  flipper.classList.remove('ec-flipped', 'ec-fade');
+  overlay.classList.add('ec-visible');
+
+  // Double rAF so browser paints the front face before the flip starts
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    flipper.classList.add('ec-flipped');
+  }));
+
+  // 400ms flip + 2000ms hold → 300ms fade → hide and fire callback
+  setTimeout(() => {
+    flipper.classList.add('ec-fade');
+    setTimeout(() => {
+      overlay.classList.remove('ec-visible');
+      if (onDone) onDone();
+    }, 300);
+  }, 2700);
 }
 
 function showEliminationCard(fi, onDone) {
-  const card = document.getElementById('event-card');
-  card.querySelector('.event-card-emoji').textContent = '🪦';
-  card.querySelector('.event-card-label').textContent = 'Eliminated';
-  card.querySelector('.event-card-name').textContent  = `${FACTION_NAMES[fi]} have fallen`;
-  card.style.display = 'flex';
-  setTimeout(() => { card.style.display = 'none'; if (onDone) onDone(); }, 2000);
+  showEventCard(
+    { emoji: '🪦', name: `${FACTION_NAMES[fi]} have fallen`, desc: 'This faction has been eliminated from the realm.' },
+    onDone
+  );
+  document.getElementById('event-card').querySelector('.ec-back-sup').textContent = 'Eliminated';
 }
 
 // Show or hide/reposition the army-split stepper near the selected region.
@@ -2090,7 +2192,7 @@ function applyWildfireEvent() {
   return lost;
 }
 
-function drawWorldEvent() {
+function drawWorldEvent(onDone) {
   const pool  = WORLD_EVENTS.filter(e => e.id !== lastEventId);
   const event = pool[Math.floor(Math.random() * pool.length)];
   lastEventId  = event.id;
@@ -2102,15 +2204,17 @@ function drawWorldEvent() {
   if (event.id === 'wildfire') wildfireLost = applyWildfireEvent();
 
   updateEventSidebar();
-  showEventCard(event);
+  showEventCard(event, onDone);
 
   if (wildfireLost > 0) {
     const u = wildfireLost === 1 ? 'unit' : 'units';
+    // Fire the wildfire banner after the flip completes (400ms) so it appears
+    // while the back face is visible, then lingers after the card fades out.
     setTimeout(() => {
       wildfireOverlay = `Wildfire!  ${wildfireLost} ${u} lost to the flames`;
       render();
       setTimeout(() => { wildfireOverlay = null; render(); }, 2000);
-    }, 2200);
+    }, 600);
   }
 }
 
@@ -2210,12 +2314,12 @@ function beginGame() {
 
   hideSetupScreen();
   resize();
-  drawWorldEvent();
   updateSidebar();
   render();
-  sdkGameplayStart();
-
-  if (currentFaction !== HUMAN_FACTION) runAiTurn();
+  drawWorldEvent(() => {
+    sdkGameplayStart();
+    if (currentFaction !== HUMAN_FACTION) runAiTurn();
+  });
 }
 
 // ─── Resume prompt ────────────────────────────────────────────────────────────
@@ -2269,7 +2373,7 @@ canvas.addEventListener('click', e => {
     // Moving into adjacent region — close panels, execute move with committed split
     closeRecruitPanel();
     closePalisadePanel();
-    executeMove(selectedRegion, hit, undefined, splitCount);
+    animatedMove(selectedRegion, hit, undefined, splitCount);
   } else {
     const isOwnCastle = hit !== -1 && landRegions[hit].owner === HUMAN_FACTION && landRegions[hit].type === 'castle';
     const isOwnEmpty  = hit !== -1 && landRegions[hit].owner === HUMAN_FACTION && landRegions[hit].type === 'empty';
