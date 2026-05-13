@@ -165,6 +165,65 @@
     #palisade-btn:hover:not(:disabled) { background: #1e3828; }
     #palisade-btn:disabled { opacity: 0.35; cursor: default; }
 
+    /* ── Sidebar coin-icon tooltip ── */
+    .tooltip-wrapper {
+      position: relative;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .tooltip-text {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: calc(100% + 6px);
+      right: 0;
+      background: rgba(26, 26, 26, 0.92);
+      border: 1px solid #c9a84c;
+      color: #f0e8d0;
+      font-size: 12px;
+      font-family: Georgia, 'Times New Roman', serif;
+      padding: 5px 8px;
+      border-radius: 5px;
+      max-width: 160px;
+      white-space: normal;
+      text-align: center;
+      line-height: 1.4;
+      pointer-events: none;
+      transition: opacity 150ms ease;
+      z-index: 100;
+    }
+    .tooltip-wrapper:hover .tooltip-text {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    /* ── Map icon tooltip ── */
+    #map-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(26, 26, 26, 0.92);
+      border: 1px solid #c9a84c;
+      color: #f0e8d0;
+      font-size: 12px;
+      font-family: Georgia, 'Times New Roman', serif;
+      padding: 5px 9px;
+      border-radius: 5px;
+      white-space: nowrap;
+      z-index: 50;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 150ms ease;
+      line-height: 1.4;
+    }
+    #map-tooltip.tt-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+    @media (hover: none) {
+      #map-tooltip { display: none !important; }
+      .tooltip-text { display: none !important; }
+    }
+
     /* ── Canvas wrap ── */
     #map-wrap { flex: 1; position: relative; overflow: hidden; }
     canvas { display: block; width: 100%; height: 100%; }
@@ -723,7 +782,7 @@
       <hr class="sep">
       <div class="s-section">
         <div class="s-label">Fortify</div>
-        <button id="palisade-btn">Build Palisade (3<img class="coin-icon" src="images/coin.png" alt="c">)</button>
+        <button id="palisade-btn">Build Palisade (3<span class="tooltip-wrapper"><img class="coin-icon" src="images/coin.png" alt="c"><span class="tooltip-text">Coin(s)</span></span>)</button>
       </div>
     </div>
 
@@ -732,6 +791,7 @@
 
   <div id="map-wrap">
     <canvas id="canvas"></canvas>
+    <div id="map-tooltip"></div>
     <div id="split-stepper">
       <button class="split-btn" id="split-minus">−</button>
       <span id="split-count">1</span>
@@ -781,7 +841,7 @@
 <script>
 'use strict';
 
-const COIN = '<img class="coin-icon" src="images/coin.png" alt="c">';
+const COIN = '<span class="tooltip-wrapper"><img class="coin-icon" src="images/coin.png" alt="c"><span class="tooltip-text">Coin(s)</span></span>';
 
 // ─── CrazyGames SDK helpers ───────────────────────────────────────────────────
 let _sdkGameplayActive = false;
@@ -2518,6 +2578,68 @@ canvas.addEventListener('mousemove', e => {
   const isOwnEmpty    = hit !== -1 && landRegions[hit].owner === HUMAN_FACTION && landRegions[hit].type === 'empty';
   canvas.style.cursor = (isSelectable || isValidTarget || isOwnEmpty) ? 'pointer' : 'default';
 });
+
+// ─── Map icon tooltips ────────────────────────────────────────────────────────
+const _mapTooltip = document.getElementById('map-tooltip');
+
+function _tooltipTextFor(idx) {
+  if (idx === -1) return null;
+  const r = landRegions[idx];
+  if (r.hasPalisade)        return 'Palisade, gives +1 defence in combat';
+  if (r.type === 'castle')  return 'Castle, produces armies';
+  if (r.type === 'village') return 'Village, generates coins';
+  return null;
+}
+
+function _showMapTooltip(e, text) {
+  _mapTooltip.textContent = text;
+  // Position while still invisible so offsetWidth is valid
+  _positionMapTooltip(e);
+  _mapTooltip.classList.add('tt-visible');
+}
+
+function _hideMapTooltip() {
+  _mapTooltip.classList.remove('tt-visible');
+}
+
+function _positionMapTooltip(e) {
+  const wrap = document.getElementById('map-wrap');
+  const wRect = wrap.getBoundingClientRect();
+  const GAP = 12;
+  const tw = _mapTooltip.offsetWidth;
+  const th = _mapTooltip.offsetHeight;
+  let x = e.clientX - wRect.left + GAP;
+  let y = e.clientY - wRect.top  - th - GAP;
+  if (x + tw > wRect.width)  x = e.clientX - wRect.left - tw - GAP;
+  if (y < 0)                 y = e.clientY - wRect.top  + GAP;
+  _mapTooltip.style.left = x + 'px';
+  _mapTooltip.style.top  = y + 'px';
+}
+
+canvas.addEventListener('mousemove', e => {
+  if (!landRegions.length) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  let text = null;
+  for (let i = 0; i < landRegions.length; i++) {
+    const r = landRegions[i];
+    if (r.type !== 'castle' && r.type !== 'village' && !r.hasPalisade) continue;
+    const [cx, cy] = centroid(r.pts);
+    let hw, hh;
+    if      (r.type === 'castle')  { hw = 21;   hh = 21;   }
+    else if (r.type === 'village') { hw = 14.5; hh = 14.5; }
+    else                           { hw = 23.5; hh = 14.5; }
+    if (mx >= cx - hw && mx <= cx + hw && my >= cy - hh && my <= cy + hh) {
+      text = _tooltipTextFor(i);
+      break;
+    }
+  }
+  if (text) _showMapTooltip(e, text);
+  else      _hideMapTooltip();
+});
+
+canvas.addEventListener('mouseleave', () => _hideMapTooltip());
 
 document.getElementById('gameover-play-again').addEventListener('click', () => {
   try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
