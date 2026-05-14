@@ -854,12 +854,14 @@ let _sdkGameplayActive = false;
 function sdkGameplayStart() {
   if (_sdkGameplayActive) return;
   _sdkGameplayActive = true;
-  try { CrazyGames.SDK.game.gameplayStart(); } catch (_) {}
+  console.log('gameplayStart fired');
+  try { CrazyGames.SDK.game.gameplayStart(); } catch (e) { console.warn('CrazyGames gameplayStart error:', e); }
 }
 function sdkGameplayStop() {
   if (!_sdkGameplayActive) return;
   _sdkGameplayActive = false;
-  try { CrazyGames.SDK.game.gameplayStop(); } catch (_) {}
+  console.log('gameplayStop fired');
+  try { CrazyGames.SDK.game.gameplayStop(); } catch (e) { console.warn('CrazyGames gameplayStop error:', e); }
 }
 
 const canvas = document.getElementById('canvas');
@@ -1994,7 +1996,8 @@ function drawPalisade(cx, cy) {
 function drawUnits(cx, cy, units) {
   if (units <= 0) return;
   const baseY = cy + 26;
-  if (units <= 5) {
+
+  if (units <= 3) {
     const size = 14;
     const span = (units - 1) * 10;
     if (armyImgReady) {
@@ -2014,11 +2017,25 @@ function drawUnits(cx, cy, units) {
       }
     }
   } else {
+    // 4+ units: 1 icon shifted left + "+N" label to its right
+    const size = 14;
+    const iconX = cx - 10;
+    if (armyImgReady) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.drawImage(_armyImg, iconX - size / 2, baseY - size / 2, size, size);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = ICON_INK;
+      ctx.beginPath();
+      ctx.arc(iconX, baseY, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.fillStyle = ICON_INK;
-    ctx.font = 'bold 12px Georgia';
-    ctx.textAlign = 'center';
+    ctx.font = 'bold 11px Georgia';
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(units), cx, baseY);
+    ctx.fillText(`+${units - 1}`, iconX + size / 2 + 2, baseY);
   }
 }
 
@@ -2420,8 +2437,8 @@ function beginGame() {
   resize();
   updateSidebar();
   render();
+  sdkGameplayStart();
   drawWorldEvent(() => {
-    sdkGameplayStart();
     if (currentFaction !== HUMAN_FACTION) runAiTurn();
   });
 }
