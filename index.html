@@ -228,23 +228,37 @@
     #map-wrap { flex: 1; position: relative; overflow: hidden; }
     canvas { display: block; width: 100%; height: 100%; }
 
+    /* ── World event banner ── */
+    #event-banner {
+      display: none;
+      position: absolute; top: 0; left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(22, 17, 10, 0.88);
+      border: 1px solid #3a2810; border-top: none;
+      border-radius: 0 0 6px 6px;
+      padding: 8px 22px;
+      align-items: center; gap: 12px;
+      white-space: nowrap;
+    }
+    #event-banner.eb-visible { display: flex; }
+
     /* ── How To button ── */
     #howto-btn {
-      position: absolute; top: 10px; right: 10px; z-index: 60;
-      padding: 6px 14px;
-      min-height: 44px; min-width: 44px;
-      background: #1a1206;
-      color: #c9a84c;
-      border: 1px solid #6a4820;
-      border-radius: 3px;
+      position: absolute; top: 0; right: 0; z-index: 60;
+      padding: 8px 22px;
+      background: rgba(22, 17, 10, 0.88);
+      color: #6a5030;
+      border: 1px solid #3a2810; border-top: none;
+      border-radius: 0 0 0 6px;
       font-family: Georgia, 'Times New Roman', serif;
-      font-size: 12px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
+      font-size: 14px;
+      font-style: italic;
+      letter-spacing: 0.5px;
       cursor: pointer;
       user-select: none;
     }
-    #howto-btn:hover { background: #2a1e10; border-color: #c9a84c; }
+    #howto-btn:hover { color: #c0a870; border-color: #5a3810; }
 
     /* ── How To overlay ── */
     #howto-screen {
@@ -372,35 +386,35 @@
       display: none;
       position: fixed; inset: 0; z-index: 110;
       background: rgba(0,0,0,0.82);
-      align-items: flex-start; justify-content: center;
+      align-items: center; justify-content: center;
       overflow-y: auto;
     }
     .setup-inner {
       width: 100%; max-width: 840px;
-      padding: 36px 48px 48px;
-      display: flex; flex-direction: column; gap: 22px;
+      padding: 10px 24px 10px;
+      display: flex; flex-direction: column; gap: 10px;
     }
-    .setup-title-wrap { text-align: center; padding-bottom: 8px; }
+    .setup-title-wrap { text-align: center; padding-bottom: 4px; }
     .setup-title {
       color: #c9a84c;
-      font-size: 34px;
+      font-size: 28px;
       font-weight: bold;
       text-transform: uppercase;
-      letter-spacing: 8px;
+      letter-spacing: 6px;
     }
     .setup-subtitle {
       color: #4a3820;
       font-size: 11px;
       letter-spacing: 4px;
       text-transform: uppercase;
-      margin-top: 8px;
+      margin-top: 4px;
     }
     .setup-card {
       border: 1px solid #261a08;
       border-radius: 6px;
       background: #1a1206;
-      padding: 28px 28px 24px;
-      display: flex; flex-direction: column; gap: 22px;
+      padding: 12px 20px 12px;
+      display: flex; flex-direction: column; gap: 8px;
     }
     .setup-sep {
       border: none;
@@ -408,10 +422,10 @@
       margin: 0;
     }
     .setup-section {
-      display: flex; flex-direction: column; gap: 14px;
+      display: flex; flex-direction: column; gap: 8px;
     }
     .setup-section-label {
-      font-size: 9px;
+      font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 2.5px;
       color: #6a5030;
@@ -419,11 +433,11 @@
     .faction-cards { display: flex; gap: 10px; }
     .faction-card {
       flex: 1;
-      padding: 13px 11px;
+      padding: 8px 10px;
       border: 1px solid #261a08;
       border-radius: 4px;
       cursor: pointer;
-      display: flex; flex-direction: column; gap: 9px;
+      display: flex; flex-direction: column; gap: 5px;
       background: #16110a;
       user-select: none;
       transition: border-color 0.12s, background 0.12s;
@@ -432,14 +446,14 @@
     .faction-card.selected { border-color: #c9a84c; background: rgba(201,168,76,0.07); }
     .faction-card-top { display: flex; align-items: center; gap: 9px; }
     .faction-swatch { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; }
-    .faction-card-name { color: #c0a870; font-size: 14px; }
+    .faction-card-name { color: #c0a870; font-size: 15px; }
     .faction-card.selected .faction-card-name { color: #e8d090; }
-    .faction-card-trait { color: #a89070; font-size: 13px; line-height: 1.5; font-style: italic; }
+    .faction-card-trait { color: #a89070; font-size: 12px; line-height: 1.4; font-style: italic; }
     .faction-card.selected .faction-card-trait { color: #f0d898; }
     .option-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .option-btn {
-      padding: 10px 16px;
-      min-height: 44px;
+      padding: 7px 12px;
+      min-height: 38px;
       border: 1px solid #261a08;
       border-radius: 3px;
       cursor: pointer;
@@ -454,12 +468,12 @@
     }
     .option-btn:hover { border-color: #5a3810; color: #c0a870; }
     .option-btn.selected { border-color: #c9a84c; background: rgba(201,168,76,0.07); color: #e8d090; }
-    .option-btn-desc { font-size: 13px; color: #a89070; font-style: italic; display: block; margin-top: 3px; }
+    .option-btn-desc { font-size: 11px; color: #a89070; font-style: italic; display: block; margin-top: 2px; }
     .option-btn.selected .option-btn-desc { color: #f0d898; }
     #start-game-btn {
       align-self: center;
-      padding: 13px 60px;
-      min-height: 44px;
+      padding: 10px 40px;
+      min-height: 40px;
       background: #3a2810;
       color: #c9a84c;
       border: 1px solid #6a4820;
@@ -481,8 +495,8 @@
       text-transform: uppercase;
       cursor: pointer;
       padding: 4px 8px;
-      min-height: 44px; min-width: 44px;
-      margin-top: -6px;
+      min-height: 36px; min-width: 44px;
+      margin-top: -4px;
     }
     #howto-btn-setup:hover { color: #c9a84c; }
 
@@ -760,15 +774,6 @@
       </div>
     </div>
 
-    <hr class="sep">
-
-    <div class="s-section">
-      <div class="s-label">World Event</div>
-      <div class="event-box">
-        <span class="event-empty">No event this turn</span>
-      </div>
-    </div>
-
     <div id="recruit-panel" style="display:none">
       <hr class="sep">
       <div class="s-section">
@@ -791,6 +796,7 @@
 
   <div id="map-wrap">
     <canvas id="canvas"></canvas>
+    <div id="event-banner"></div>
     <div id="map-tooltip"></div>
     <div id="split-stepper">
       <button class="split-btn" id="split-minus">−</button>
@@ -1165,10 +1171,10 @@ function movesForFaction(fi) {
 
 // ─── World Event System ───────────────────────────────────────────────────────
 const WORLD_EVENTS = [
-  { id: 'flood',       emoji: '🌊', name: 'Flood',        desc: 'The waters rise without warning. One coastal region is swallowed by the sea: impassable for two turns, its villages unproductive.' },
-  { id: 'wildfire',    emoji: '🔥', name: 'Wildfire',     desc: 'Fire sweeps through the land. One region is impassable and yields no coin. Any army caught inside loses half its forces.' },
-  { id: 'richHarvest', emoji: '🌾', name: 'Rich Harvest', desc: 'The fields overflow with plenty. Armies march with full bellies and fight with greater fury. All attackers gain one extra unit in battle this turn.' },
-  { id: 'sunnyDays',   emoji: '☀️', name: 'Sunny Days',   desc: 'A rare moment of peace. The land is calm, the skies are clear. No event troubles the realm this turn.' },
+  { id: 'flood',       emoji: '🌊', name: 'Flood',        desc: 'Flooded region is impassable for two turns, its villages unproductive.' },
+  { id: 'wildfire',    emoji: '🔥', name: 'Wildfire',     desc: 'Region on fire is impassable and yields no coin. Any army caught inside loses half its units.' },
+  { id: 'richHarvest', emoji: '🌾', name: 'Rich Harvest', desc: 'All attackers gain one extra unit in battle this turn.' },
+  { id: 'sunnyDays',   emoji: '☀️', name: 'Sunny Days',   desc: 'Nothing troubles the realm.' },
 ];
 let currentEvent = null;   // active WORLD_EVENTS entry, or null
 let lastEventId  = null;   // id of previous round's event (prevents repeats)
@@ -1595,7 +1601,7 @@ function refreshRecruitPanel() {
   document.getElementById('recruit-info').innerHTML =
     `Balance: <strong>${coins[HUMAN_FACTION]}${COIN}</strong><br>Next unit costs: <strong>${cost}${COIN}</strong>`;
   const btn = document.getElementById('recruit-btn');
-  btn.innerHTML = `Recruit (${cost}${COIN})`;
+  btn.innerHTML = `Recruit — ${cost}${COIN}`;
   btn.disabled = coins[HUMAN_FACTION] < cost;
 }
 
@@ -2202,17 +2208,17 @@ resize();
 
 // ─── World event helpers ──────────────────────────────────────────────────────
 function updateEventSidebar() {
-  const box = document.querySelector('.event-box');
+  const banner = document.getElementById('event-banner');
   if (!currentEvent) {
-    box.innerHTML = '<span class="event-empty">No event this turn</span>';
+    banner.classList.remove('eb-visible');
     return;
   }
-  box.innerHTML =
-    `<div class="event-box-header">` +
-      `<span style="font-size:21px">${currentEvent.emoji}</span>` +
-      `<span style="color:#c0a870;font-size:13px">${currentEvent.name}</span>` +
-    `</div>` +
-    `<div class="event-box-desc">${currentEvent.desc}</div>`;
+  banner.innerHTML =
+    `<span style="font-size:22px;line-height:1">${currentEvent.emoji}</span>` +
+    `<span style="color:#c0a870;font-size:16px">${currentEvent.name}</span>` +
+    `<span style="color:#3a2810;font-size:14px">—</span>` +
+    `<span style="color:#6a5030;font-size:14px;font-style:italic">${currentEvent.desc}</span>`;
+  banner.classList.add('eb-visible');
 }
 
 function showEventCard(event, onDone) {
