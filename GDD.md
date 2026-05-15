@@ -123,7 +123,7 @@ At the start of each round (before the first player's turn), one event card is d
 A coastal region becomes impassable for 2 turns. If occupied, the army cannot move in or out. Flooded villages produce no coins.
 
 **🔥 Wildfire**
-One unconquered (neutral) region becomes impassable for 1 turn. Villages under wildfire produce no coins. If all regions are already conquered, a wildfire breaks out in a random occupied region — half the occupying army dies (round down). Cannot stack on a region already on fire.
+One unconquered (neutral) region becomes impassable for 1 turn. Villages under wildfire produce no coins. If all regions are already conquered, a wildfire breaks out in a random occupied region — half the occupying army dies (round down) while being blocked. Cannot stack on a region already on fire.
 
 **🌾 Rich Harvest**
 All attacking armies count as +1 extra unit in all battles this turn. Stacks with Warriors faction passive.

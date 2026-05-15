@@ -2339,8 +2339,9 @@ function applyWildfireEvent() {
   const idx = occupied[Math.floor(Math.random() * occupied.length)];
   const r   = landRegions[idx];
   r.wildfire  = true;
-  const lost  = Math.floor(r.units / 2);
-  r.units     = Math.max(r.units - lost, 1);
+  const after = Math.floor(r.units / 2);
+  const lost  = r.units - after;
+  r.units     = after;
   return lost;
 }
 
