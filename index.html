@@ -245,18 +245,18 @@
 
     /* ── How To button ── */
     #howto-btn {
-      position: absolute; top: 0; right: 0; z-index: 60;
-      padding: 8px 22px;
-      background: rgba(22, 17, 10, 0.88);
+      background: none;
       color: #6a5030;
-      border: 1px solid #3a2810; border-top: none;
-      border-radius: 0 0 0 6px;
+      border: 1px solid #3a2810;
+      border-radius: 3px;
       font-family: Georgia, 'Times New Roman', serif;
-      font-size: 14px;
-      font-style: italic;
-      letter-spacing: 0.5px;
+      font-size: 16px;
+      min-width: 28px; min-height: 28px;
+      padding: 2px 8px;
       cursor: pointer;
       user-select: none;
+      line-height: 1;
+      flex-shrink: 0;
     }
     #howto-btn:hover { color: #c0a870; border-color: #5a3810; }
 
@@ -727,20 +727,26 @@
     <div class="game-title">Castles at War</div>
 
     <div class="s-section">
-      <div class="s-label">Turn</div>
-      <div class="turn-row">
-        <span class="turn-num" id="turn-num">1</span>
-        <span class="turn-of" id="turn-of"></span>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="s-label" style="margin-bottom:0">Turn</div>
+        <button id="howto-btn">?</button>
       </div>
-      <div id="active-turn-label" style="color:#c9a84c;font-size:13px;margin-top:8px;letter-spacing:0.5px">Your Turn</div>
-    </div>
-
-    <div class="s-section">
-      <div class="s-label">Moves Remaining</div>
-      <div class="pips">
-        <div class="pip"></div>
-        <div class="pip"></div>
-        <div class="pip"></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div>
+          <div class="turn-row">
+            <span class="turn-num" id="turn-num">1</span>
+            <span class="turn-of" id="turn-of"></span>
+          </div>
+          <div id="active-turn-label" style="color:#c9a84c;font-size:13px;margin-top:8px;letter-spacing:0.5px">Your Turn</div>
+        </div>
+        <div style="text-align:right">
+          <div class="s-label" style="margin-bottom:3px">Moves</div>
+          <div class="pips" style="margin-top:0">
+            <div class="pip"></div>
+            <div class="pip"></div>
+            <div class="pip"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -748,7 +754,7 @@
 
     <hr class="sep">
 
-    <div class="s-section">
+    <div id="faction-section" class="s-section">
       <div class="s-label">Factions</div>
       <div class="faction-list">
         <div class="faction-row" data-faction="0">
@@ -775,7 +781,6 @@
     </div>
 
     <div id="recruit-panel" style="display:none">
-      <hr class="sep">
       <div class="s-section">
         <div class="s-label">Recruit</div>
         <div id="recruit-info" style="color:#c0a870;font-size:13px;line-height:1.8;margin-bottom:10px"></div>
@@ -784,7 +789,6 @@
     </div>
 
     <div id="palisade-panel" style="display:none">
-      <hr class="sep">
       <div class="s-section">
         <div class="s-label">Fortify</div>
         <button id="palisade-btn">Build Palisade (3<span class="tooltip-wrapper"><img class="coin-icon" src="images/coin.png" alt="c"><span class="tooltip-text">Coin(s)</span></span>)</button>
@@ -803,7 +807,6 @@
       <span id="split-count">1</span>
       <button class="split-btn" id="split-plus">+</button>
     </div>
-    <button id="howto-btn">How to</button>
   </div>
 </div>
 
@@ -1565,26 +1568,35 @@ function recruitCost() {
   return RECRUIT_COSTS[Math.min(recruitedThisTurn, RECRUIT_COSTS.length - 1)];
 }
 
+function syncFactionSection() {
+  const noneOpen = recruitCastleIdx === null && palisadePanelIdx === null;
+  document.getElementById('faction-section').style.display = noneOpen ? '' : 'none';
+}
+
 function openRecruitPanel(idx) {
   closePalisadePanel();
   recruitCastleIdx = idx;
   refreshRecruitPanel();
+  syncFactionSection();
 }
 
 function closeRecruitPanel() {
   recruitCastleIdx = null;
   document.getElementById('recruit-panel').style.display = 'none';
+  syncFactionSection();
 }
 
 function openPalisadePanel(idx) {
   closeRecruitPanel();
   palisadePanelIdx = idx;
   refreshPalisadePanel();
+  syncFactionSection();
 }
 
 function closePalisadePanel() {
   palisadePanelIdx = null;
   document.getElementById('palisade-panel').style.display = 'none';
+  syncFactionSection();
 }
 
 function refreshPalisadePanel() {
@@ -1936,37 +1948,43 @@ function centroid(pts) {
 }
 
 function drawCastle(cx, cy) {
-  const size = 42;
+  const sc   = canvas.width / LW;
+  const size = Math.round(Math.max(18, 42 * sc));
+  const dy   = cy - Math.round(size * 0.4); // shift icon up so army icons fit below
   if (castleImgReady) {
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(_castleImg, cx - size / 2, cy - size / 2, size, size);
+    ctx.drawImage(_castleImg, cx - size / 2, dy - size / 2, size, size);
     ctx.restore();
   } else {
-    const w = 18, bodyH = 13, mw = 5, mh = 5;
-    const x = cx - w / 2, y = cy - (bodyH + mh) / 2;
+    const r = size / 42;
+    const w = Math.round(18*r), bodyH = Math.round(13*r), mw = Math.round(5*r), mh = Math.round(5*r);
+    const x = cx - w / 2, y = dy - (bodyH + mh) / 2;
     ctx.fillStyle = ICON_INK;
-    ctx.fillRect(x,               y + mh, w,  bodyH);
-    ctx.fillRect(x,               y,      mw, mh);
-    ctx.fillRect(x + (w - mw)/2,  y,      mw, mh);
-    ctx.fillRect(x + w - mw,      y,      mw, mh);
+    ctx.fillRect(x,              y + mh, w,  bodyH);
+    ctx.fillRect(x,              y,      mw, mh);
+    ctx.fillRect(x + (w - mw)/2, y,      mw, mh);
+    ctx.fillRect(x + w - mw,     y,      mw, mh);
   }
 }
 
 function drawVillage(cx, cy) {
-  const size = 29;
+  const sc   = canvas.width / LW;
+  const size = Math.round(Math.max(13, 29 * sc));
+  const dy   = cy - Math.round(size * 0.4); // shift icon up so army icons fit below
   if (villageImgReady) {
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(_villageImg, cx - size / 2, cy - size / 2, size, size);
+    ctx.drawImage(_villageImg, cx - size / 2, dy - size / 2, size, size);
     ctx.restore();
   } else {
-    const w = 11, bodyH = 7, roofH = 6;
-    const x = cx - w / 2, y = cy - (bodyH + roofH) / 2;
+    const r = size / 29;
+    const w = Math.round(11*r), bodyH = Math.round(7*r), roofH = Math.round(6*r);
+    const x = cx - w / 2, y = dy - (bodyH + roofH) / 2;
     ctx.fillStyle = ICON_INK;
     ctx.fillRect(x, y + roofH, w, bodyH);
     ctx.beginPath();
-    ctx.moveTo(cx,      y);
+    ctx.moveTo(cx,     y);
     ctx.lineTo(x + w,  y + roofH);
     ctx.lineTo(x,      y + roofH);
     ctx.closePath();
@@ -1974,68 +1992,71 @@ function drawVillage(cx, cy) {
   }
 }
 
-
 function drawPalisade(cx, cy) {
-  const pw = 47, ph = 29;
+  const sc = canvas.width / LW;
+  const pw = Math.round(Math.max(20, 47 * sc));
+  const ph = Math.round(Math.max(13, 29 * sc));
   if (palisadeImgReady) {
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
     ctx.drawImage(_palisadeImg, cx - pw / 2, cy - ph / 2, pw, ph);
     ctx.restore();
   } else {
+    const r = pw / 47;
     ctx.fillStyle = ICON_INK;
     for (let i = 0; i < 5; i++) {
-      ctx.fillRect(cx - 16 + i * 8, cy - 10, 3, 11);
+      ctx.fillRect(cx - Math.round(16*r) + i * Math.round(8*r), cy - Math.round(10*r), Math.round(3*r), Math.round(11*r));
     }
-    ctx.fillRect(cx - 18, cy - 7, 36, 2);
-    ctx.fillRect(cx - 18, cy - 3, 36, 2);
+    ctx.fillRect(cx - Math.round(18*r), cy - Math.round(7*r), Math.round(36*r), 2);
+    ctx.fillRect(cx - Math.round(18*r), cy - Math.round(3*r), Math.round(36*r), 2);
   }
 }
 
-// Up to 5 helmet icons; 6+ shows a number.
+// Up to 3 helmet icons; 4+ shows one icon + "+N" label.
 function drawUnits(cx, cy, units) {
   if (units <= 0) return;
-  const baseY = cy + 26;
+  const scale  = canvas.width / LW;
+  const iconSz = Math.round(Math.max(8, 14 * Math.sqrt(scale)));
+  const gap    = Math.round(Math.max(6, 10 * scale));
+  const baseY  = cy + Math.round(Math.max(10, 16 * scale));
 
   if (units <= 3) {
-    const size = 14;
-    const span = (units - 1) * 10;
+    const span = (units - 1) * gap;
     if (armyImgReady) {
       ctx.save();
       ctx.globalCompositeOperation = 'multiply';
       for (let i = 0; i < units; i++) {
-        const ix = cx - span / 2 + i * 10;
-        ctx.drawImage(_armyImg, ix - size / 2, baseY - size / 2, size, size);
+        const ix = cx - span / 2 + i * gap;
+        ctx.drawImage(_armyImg, ix - iconSz / 2, baseY - iconSz / 2, iconSz, iconSz);
       }
       ctx.restore();
     } else {
       ctx.fillStyle = ICON_INK;
       for (let i = 0; i < units; i++) {
         ctx.beginPath();
-        ctx.arc(cx - span / 2 + i * 10, baseY, 4, 0, Math.PI * 2);
+        ctx.arc(cx - span / 2 + i * gap, baseY, Math.max(2, Math.round(iconSz * 0.3)), 0, Math.PI * 2);
         ctx.fill();
       }
     }
   } else {
     // 4+ units: 1 icon shifted left + "+N" label to its right
-    const size = 14;
-    const iconX = cx - 10;
+    const iconX = cx - gap;
     if (armyImgReady) {
       ctx.save();
       ctx.globalCompositeOperation = 'multiply';
-      ctx.drawImage(_armyImg, iconX - size / 2, baseY - size / 2, size, size);
+      ctx.drawImage(_armyImg, iconX - iconSz / 2, baseY - iconSz / 2, iconSz, iconSz);
       ctx.restore();
     } else {
       ctx.fillStyle = ICON_INK;
       ctx.beginPath();
-      ctx.arc(iconX, baseY, 4, 0, Math.PI * 2);
+      ctx.arc(iconX, baseY, Math.max(2, Math.round(iconSz * 0.3)), 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.fillStyle = ICON_INK;
-    ctx.font = 'bold 11px Georgia';
+    ctx.font = `bold ${Math.round(Math.max(8, 11 * Math.sqrt(scale)))}px Georgia`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`+${units - 1}`, iconX + size / 2 + 2, baseY);
+    ctx.fillText(`+${units - 1}`, iconX + iconSz / 2 + 2, baseY);
   }
 }
 
