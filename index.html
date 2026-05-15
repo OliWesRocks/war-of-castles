@@ -1183,6 +1183,7 @@ const WORLD_EVENTS = [
 ];
 let currentEvent = null;   // active WORLD_EVENTS entry, or null
 let lastEventId  = null;   // id of previous round's event (prevents repeats)
+let lastFloodedRegionIdx = -1; // prevents re-flooding the same region back-to-back
 let richHarvest    = false;  // true when Rich Harvest is the active event
 let wildfireOverlay = null;  // text string while the "X units lost" banner is showing
 
@@ -1891,6 +1892,7 @@ function saveGame() {
     movedRegions: [...movedRegions],
     currentEvent,
     lastEventId,
+    lastFloodedRegionIdx,
     richHarvest,
     eliminated: eliminated.slice(),
     landRegions: landRegions.map(r => ({
@@ -1927,9 +1929,10 @@ function loadGame(state) {
   state.coins.forEach((v, i) => { coins[i] = v; });
   movedRegions.clear();
   for (const i of state.movedRegions) movedRegions.add(i);
-  currentEvent = state.currentEvent ?? null;
-  lastEventId  = state.lastEventId  ?? null;
-  richHarvest  = state.richHarvest  ?? false;
+  currentEvent         = state.currentEvent         ?? null;
+  lastEventId          = state.lastEventId          ?? null;
+  lastFloodedRegionIdx = state.lastFloodedRegionIdx ?? -1;
+  richHarvest          = state.richHarvest          ?? false;
   if (state.eliminated) state.eliminated.forEach((v, i) => { eliminated[i] = v; });
   selectedRegion = null;
   gameOver = false;
@@ -2312,7 +2315,10 @@ function positionStepper() {
 function applyFloodEvent() {
   const coastalIdxs = landRegions.reduce((acc, r, i) => { if (r.coastal) acc.push(i); return acc; }, []);
   if (coastalIdxs.length === 0) return;
-  const idx = coastalIdxs[Math.floor(Math.random() * coastalIdxs.length)];
+  const fresh = coastalIdxs.filter(i => i !== lastFloodedRegionIdx);
+  const pool = fresh.length > 0 ? fresh : coastalIdxs;
+  const idx = pool[Math.floor(Math.random() * pool.length)];
+  lastFloodedRegionIdx = idx;
   landRegions[idx].floodTurnsRemaining = 2;
 }
 
@@ -2445,9 +2451,10 @@ function beginGame() {
   palisadePanelIdx  = null;
   coins.fill(0);
   eliminated.fill(false);
-  currentEvent = null;
-  lastEventId  = null;
-  richHarvest  = false;
+  currentEvent         = null;
+  lastEventId          = null;
+  lastFloodedRegionIdx = -1;
+  richHarvest          = false;
   wildfireOverlay = null;
 
   document.getElementById('gameover-screen').style.display = 'none';

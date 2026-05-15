@@ -185,14 +185,6 @@ Every new game generates a unique map according to these rules:
 
 ## 13. AI Players
 
-### Difficulty Levels
-| Level | Behaviour |
-|---|---|
-| Nice | Never attacks the human player first |
-| Rude | Prioritises attacking the human player's regions |
-| Mean | Plays optimally, no restrictions |
-| Evil | Plays optimally, specifically targets human player's castles |
-
 ### AI Decision Priority (per move)
 1. Attack adjacent enemy castle if attackable (more units)
 2. Take adjacent neutral castle if attackable
