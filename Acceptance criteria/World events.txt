@@ -1,0 +1,36 @@
+FLOOD
+
+Given a coastal region exists with an army on it, when Flood is drawn, then that region becomes impassable for 2 turns and no army can move in or out.
+Given a player owns a coastal village, when Flood is applied to it, then the village produces 0 coins for the duration instead of the usual 2.
+Given a Flood was applied at the start of round N, when round N+1 begins, then the region is still impassable, and when round N+2 begins, then the region is passable again.
+Given the event system selects a Flood target, when it picks a region, then the selected region always has isCoastal true and is never an inland region.
+Given the map has no coastal regions, when Flood is drawn, then the game does not crash and treats the event as a no-op.
+
+WILDFIRE
+
+Given neutral regions exist on the map, when Wildfire is drawn, then one neutral region is selected and marked impassable for 1 turn.
+Given a neutral village is hit by Wildfire, when end-of-turn income runs, then that village produces 0 coins for the burn turn and resumes normal production the turn after.
+Given a Wildfire affects an occupied region, when this region has an army then the army units are halved rounding down, and it is not marked impassable.
+Given the Wildfire affects an occupied region, when that region has 1 unit, then units are halved and rounded down, and the region ends with 0 units and ownership is retained.
+
+RICH HARVEST
+
+Given Rich Harvest is the active event, when any faction attacks this round, then all attacking armies receive +1 unit power for that combat regardless of faction.
+Given a Warriors player attacks with N units during a Rich Harvest round, when combat is resolved, then their effective attack is N+2 — one from the Warriors passive and one from Rich Harvest
+Given Rich Harvest was active in round N, when round N+1 begins with a different event, then attacks resolve at face value with no carry-over bonus.
+
+SUNNY DAYS
+
+Given Sunny Days is drawn, when the event is processed, then the factions passives are in effect as normal, the villages are generating coins as normal, and no other affects take place, no new regions are blocked.
+
+NO-REPEAT RULE
+
+Given event X was drawn last round, when the next event is drawn, then event X is excluded from the pool and a different event is selected.
+Given event X was drawn in round N and a different event in round N+1, when round N+2 draws an event, then event X is a valid candidate again.
+
+
+UI / DISPLAY
+
+Given a new round begins, when the event is drawn, then the event card is shown with its icon and description and auto-dismisses after approximately 2 seconds before the first player's turn begins.
+Given a Flood and a Wildfire are both active simultaneously, when the map is rendered, then the flooded region shows a blue tint and the burning region shows an orange tint.
+Given an event is active, when the player takes their moves during that round, then the topbar displays the current event for the full round and clears it when the next round starts.

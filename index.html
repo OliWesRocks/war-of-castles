@@ -46,12 +46,14 @@
     .turn-num { color: #e8d090; font-size: 35px; line-height: 1; }
     .turn-of  { color: #6a5030; font-size: 15px; }
 
-    .pips { display: flex; gap: 7px; margin-top: 8px; }
+    .pips { display: flex; gap: 6px; align-items: center; }
     .pip {
-      width: 16px; height: 16px; border-radius: 50%;
-      background: #c9a84c; border: 1px solid #8a6820;
+      width: 0; height: 0;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-left: 10px solid #c9a84c;
     }
-    .pip.used { background: #261a08; border-color: #3a2810; }
+    .pip.used { border-left-color: #3a2810; }
 
     .faction-list { display: flex; flex-direction: column; gap: 10px; }
     .faction-row  { display: flex; align-items: center; gap: 8px; }
@@ -259,6 +261,36 @@
       flex-shrink: 0;
     }
     #howto-btn:hover { color: #c0a870; border-color: #5a3810; }
+
+    /* ── Sound toggle button ── */
+    #sound-btn {
+      background: #261a08;
+      color: #c9a84c;
+      border: 1px solid #6a4820;
+      border-radius: 3px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 15px;
+      min-width: 28px; min-height: 28px;
+      padding: 2px 8px;
+      cursor: pointer;
+      user-select: none;
+      line-height: 1;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    #sound-btn:hover { background: #3a2810; border-color: #8a6030; }
+    #sound-btn.muted { color: #4a3018; border-color: #3a2810; }
+    #sound-btn.muted::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 160%; height: 2px;
+      background: #6a4820;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      pointer-events: none;
+    }
 
     /* ── How To overlay ── */
     #howto-screen {
@@ -727,25 +759,27 @@
     <div class="game-title">Castles at War</div>
 
     <div class="s-section">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div class="s-label" style="margin-bottom:0">Turn</div>
+      <!-- Row 1: sound (left) + ? (right) -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <button id="sound-btn" title="Toggle sound">♫</button>
         <button id="howto-btn">?</button>
       </div>
-      <div style="display:flex;align-items:flex-start;justify-content:space-between">
-        <div>
-          <div class="turn-row">
-            <span class="turn-num" id="turn-num">1</span>
-            <span class="turn-of" id="turn-of"></span>
-          </div>
-          <div id="active-turn-label" style="color:#c9a84c;font-size:13px;margin-top:8px;letter-spacing:0.5px">Your Turn</div>
+      <hr class="sep" style="margin:0 0 10px">
+      <!-- Row 2: turn number (left) + moves label (right) -->
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <div class="turn-row">
+          <span class="turn-num" id="turn-num">1</span>
+          <span class="turn-of" id="turn-of"></span>
         </div>
-        <div style="text-align:right">
-          <div class="s-label" style="margin-bottom:3px">Moves</div>
-          <div class="pips" style="margin-top:0">
-            <div class="pip"></div>
-            <div class="pip"></div>
-            <div class="pip"></div>
-          </div>
+        <div class="s-label" style="margin-bottom:0">Moves</div>
+      </div>
+      <!-- Row 3: your turn label (left) + pips (right), aligned -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+        <div id="active-turn-label" style="color:#c9a84c;font-size:13px;letter-spacing:0.5px">Your Turn</div>
+        <div class="pips">
+          <div class="pip"></div>
+          <div class="pip"></div>
+          <div class="pip"></div>
         </div>
       </div>
     </div>
@@ -851,6 +885,37 @@
 'use strict';
 
 const COIN = '<span class="tooltip-wrapper"><img class="coin-icon" src="images/coin.png" alt="c"><span class="tooltip-text">Coin(s)</span></span>';
+
+// ─── Audio ────────────────────────────────────────────────────────────────────
+const bgMusic     = new Audio('sounds/Backgound - elongated loop3.m4a');
+bgMusic.loop      = true;
+bgMusic.volume    = 0.5;
+const battleSound = new Audio('sounds/Battle sound.m4a');
+battleSound.volume = 0.8;
+const marchSound  = new Audio('sounds/March sound.m4a');
+marchSound.volume  = 0.8;
+const fallenSound = new Audio('sounds/Faction has fallen.m4a');
+fallenSound.volume = 0.9;
+
+let soundEnabled = true;
+
+function playSound(audio) {
+  if (!soundEnabled) return;
+  audio.currentTime = 0;
+  audio.play().catch(() => {});
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('sound-btn');
+  btn.textContent = '♫';
+  btn.classList.toggle('muted', !soundEnabled);
+  if (soundEnabled) {
+    bgMusic.play().catch(() => {});
+  } else {
+    bgMusic.pause();
+  }
+}
 
 // ─── CrazyGames SDK helpers ───────────────────────────────────────────────────
 let _sdkGameplayActive = false;
@@ -1308,6 +1373,11 @@ function executeMove(fromIdx, toIdx, onComplete, commitUnits) {
     selectedRegion = null;
   }
 
+  // Sound: human moves to non-own territory
+  if (attacker === HUMAN_FACTION) playSound(marchSound);
+  // Sound: any player engages another player's (non-neutral) army
+  if (to.owner !== null && isCombat) playSound(battleSound);
+
   // Block input for all combat, flash first, then resolve
   combatBlocked = true;
   selectedRegion = null;
@@ -1483,6 +1553,7 @@ function checkEliminations(onDone) {
   const active    = [0, 1, 2, 3].filter(f => !eliminated[f]);
   const shouldEnd = active.length <= 1 || eliminated[HUMAN_FACTION];
   if (newlyElim.length > 0) {
+    playSound(fallenSound);
     showEliminationCard(newlyElim[0], () => { if (onDone) onDone(shouldEnd); });
   } else {
     if (onDone) onDone(shouldEnd);
@@ -1510,6 +1581,8 @@ function determineWinner() {
 
 function showGameOver() {
   sdkGameplayStop();
+  bgMusic.pause();
+  bgMusic.currentTime = 0;
   gameOver = true;
   aiTurnActive = true; // freeze all input
   try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
@@ -2467,6 +2540,8 @@ function beginGame() {
   updateSidebar();
   render();
   sdkGameplayStart();
+  bgMusic.currentTime = 0;
+  bgMusic.play().catch(() => {});
   drawWorldEvent(() => {
     if (currentFaction !== HUMAN_FACTION) runAiTurn();
   });
@@ -2568,6 +2643,8 @@ canvas.addEventListener('click', e => {
 document.getElementById('end-turn-btn').addEventListener('click', () => {
   if (!combatBlocked && !aiTurnActive && currentFaction === HUMAN_FACTION) endFactionTurn();
 });
+
+document.getElementById('sound-btn').addEventListener('click', toggleSound);
 
 document.getElementById('howto-btn').addEventListener('click', () => {
   document.getElementById('howto-screen').classList.add('open');
