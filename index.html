@@ -2089,15 +2089,28 @@ function drawPalisade(cx, cy) {
 }
 
 // Up to 3 helmet icons; 4+ shows one icon + "+N" label.
-function drawUnits(cx, cy, units) {
+function drawUnits(cx, cy, units, glowCount) {
   if (units <= 0) return;
   const scale  = canvas.width / LW;
   const iconSz = Math.round(Math.max(8, 14 * Math.sqrt(scale)));
   const gap    = Math.round(Math.max(6, 10 * scale));
   const baseY  = cy + Math.round(Math.max(10, 16 * scale));
 
+  function glowAt(x) {
+    const gr   = iconSz * 1.1;
+    const grad = ctx.createRadialGradient(x, baseY, 0, x, baseY, gr);
+    grad.addColorStop(0, 'rgba(255, 228, 130, 0.85)');
+    grad.addColorStop(1, 'rgba(255, 228, 130, 0)');
+    ctx.beginPath();
+    ctx.arc(x, baseY, gr, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
   if (units <= 3) {
     const span = (units - 1) * gap;
+    // Glow only the first glowCount icons
+    for (let i = 0; i < glowCount; i++) glowAt(cx - span / 2 + i * gap);
     if (armyImgReady) {
       ctx.save();
       ctx.globalCompositeOperation = 'multiply';
@@ -2117,6 +2130,7 @@ function drawUnits(cx, cy, units) {
   } else {
     // 4+ units: 1 icon shifted left + "+N" label to its right
     const iconX = cx - gap;
+    if (glowCount > 0) glowAt(iconX);
     if (armyImgReady) {
       ctx.save();
       ctx.globalCompositeOperation = 'multiply';
@@ -2177,7 +2191,7 @@ function drawAllSeas() {
   ctx.restore();
 }
 
-function drawLand(region) {
+function drawLand(region, selected) {
   ctx.save();
   tracePoly(region.pts);
   ctx.clip();
@@ -2215,7 +2229,7 @@ function drawLand(region) {
   if (region.type === 'village') drawVillage(cx, cy);
   if (region.hasPalisade)        drawPalisade(cx, cy);
 
-  drawUnits(cx, cy, region.units);
+  drawUnits(cx, cy, region.units, selected ? splitCount : 0);
 }
 
 // ─── Main render ──────────────────────────────────────────────────────────────
@@ -2226,7 +2240,7 @@ function render() {
   ctx.fillStyle = '#2a1e0a';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  for (const r of landRegions) drawLand(r);
+  for (let i = 0; i < landRegions.length; i++) drawLand(landRegions[i], i === selectedRegion);
   drawAllSeas();
 
   // Uniform land borders drawn last so they're crisp and consistent
@@ -2678,12 +2692,14 @@ document.getElementById('split-minus').addEventListener('click', () => {
   if (selectedRegion === null) return;
   splitCount = Math.max(1, splitCount - 1);
   document.getElementById('split-count').textContent = splitCount;
+  render();
 });
 
 document.getElementById('split-plus').addEventListener('click', () => {
   if (selectedRegion === null) return;
   splitCount = Math.min(landRegions[selectedRegion].units, splitCount + 1);
   document.getElementById('split-count').textContent = splitCount;
+  render();
 });
 
 document.getElementById('palisade-btn').addEventListener('click', () => {
