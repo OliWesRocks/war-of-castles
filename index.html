@@ -239,11 +239,18 @@
       background: rgba(22, 17, 10, 0.88);
       border: 1px solid #3a2810; border-top: none;
       border-radius: 0 0 6px 6px;
-      padding: 8px 22px;
-      align-items: center; gap: 12px;
+      padding: clamp(5px, 1vh, 8px) clamp(10px, 2vw, 22px);
+      align-items: center; gap: clamp(6px, 1vw, 12px);
       white-space: nowrap;
+      max-width: calc(100% - 32px);
+      overflow: hidden;
+      box-sizing: border-box;
     }
     #event-banner.eb-visible { display: flex; }
+    #event-banner .eb-emoji { font-size: clamp(14px, 2.8vw, 22px); line-height: 1; flex-shrink: 0; }
+    #event-banner .eb-name  { color: #c0a870; font-size: clamp(11px, 1.8vw, 16px); flex-shrink: 0; }
+    #event-banner .eb-dash  { color: #3a2810; font-size: clamp(10px, 1.5vw, 14px); flex-shrink: 0; }
+    #event-banner .eb-desc  { color: #6a5030; font-size: clamp(10px, 1.3vw, 14px); font-style: italic; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
     /* ── How To button ── */
     #howto-btn {
@@ -2342,10 +2349,10 @@ function updateEventSidebar() {
     return;
   }
   banner.innerHTML =
-    `<span style="font-size:22px;line-height:1">${currentEvent.emoji}</span>` +
-    `<span style="color:#c0a870;font-size:16px">${currentEvent.name}</span>` +
-    `<span style="color:#3a2810;font-size:14px">—</span>` +
-    `<span style="color:#6a5030;font-size:14px;font-style:italic">${currentEvent.desc}</span>`;
+    `<span class="eb-emoji">${currentEvent.emoji}</span>` +
+    `<span class="eb-name">${currentEvent.name}</span>` +
+    `<span class="eb-dash">—</span>` +
+    `<span class="eb-desc">${currentEvent.desc}</span>`;
   banner.classList.add('eb-visible');
 }
 
