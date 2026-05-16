@@ -905,9 +905,25 @@ const fallenSound = new Audio('sounds/Faction has fallen.m4a');
 fallenSound.volume = 0.9;
 
 let soundEnabled = true;
+let sdkMuted     = false;
+
+function audioActive() { return soundEnabled && !sdkMuted; }
+
+function applyAudioState() {
+  if (audioActive()) {
+    bgMusic.play().catch(() => {});
+  } else {
+    bgMusic.pause();
+  }
+}
+
+function applySdkMute(muted) {
+  sdkMuted = muted;
+  applyAudioState();
+}
 
 function playSound(audio) {
-  if (!soundEnabled) return;
+  if (!audioActive()) return;
   audio.currentTime = 0;
   audio.play().catch(() => {});
 }
@@ -917,11 +933,7 @@ function toggleSound() {
   const btn = document.getElementById('sound-btn');
   btn.textContent = '♫';
   btn.classList.toggle('muted', !soundEnabled);
-  if (soundEnabled) {
-    bgMusic.play().catch(() => {});
-  } else {
-    bgMusic.pause();
-  }
+  applyAudioState();
 }
 
 // ─── CrazyGames SDK helpers ───────────────────────────────────────────────────
@@ -2562,7 +2574,7 @@ function beginGame() {
   render();
   sdkGameplayStart();
   bgMusic.currentTime = 0;
-  bgMusic.play().catch(() => {});
+  applyAudioState();
   drawWorldEvent(() => {
     if (currentFaction !== HUMAN_FACTION) runAiTurn();
   });
@@ -2571,6 +2583,12 @@ function beginGame() {
 // ─── Resume prompt ────────────────────────────────────────────────────────────
 (async function initPage() {
   try { await CrazyGames.SDK.init(); } catch (_) {}
+
+  try {
+    const settings = window.CrazyGames.SDK.game.settings;
+    applySdkMute(settings?.muteAudio ?? false);
+    window.CrazyGames.SDK.game.addSettingsListener(s => applySdkMute(s?.muteAudio ?? false));
+  } catch (_) {}
 
   let raw;
   try { raw = localStorage.getItem(SAVE_KEY); } catch (_) {}
