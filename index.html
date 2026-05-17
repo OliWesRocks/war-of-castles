@@ -380,6 +380,16 @@
     .split-btn:hover { background: #4a3418; }
     #split-count { color: #e8d090; font-size: 14px; min-width: 18px; text-align: center; font-family: Georgia, 'Times New Roman', serif; }
 
+    /* ── Sidebar army split stepper (mobile) ── */
+    #split-stepper-mobile {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    #split-stepper-mobile .split-btn { min-width: 36px; min-height: 32px; font-size: 16px; }
+    #split-count-m { color: #e8d090; font-size: 24px; font-family: Georgia, 'Times New Roman', serif; line-height: 1; }
+
     /* ── Portrait guard ── */
     #rotate-prompt {
       display: none;
@@ -557,6 +567,19 @@
     }
     #end-turn-btn:hover { background: #4a3418; }
     #end-turn-btn:disabled { opacity: 0.5; cursor: default; }
+
+    /* ── Compact sidebar at short viewport heights ── */
+    @media (max-height: 377px) {
+      #sidebar { padding-top: 4px; padding-bottom: 8px; }
+      .game-title { padding-bottom: 3px; margin-bottom: 3px; }
+      .s-section { margin-bottom: 6px; }
+      .sep { margin-bottom: 6px; }
+      #sidebar-util-row { margin-bottom: 2px !important; }
+      #sidebar-util-sep { margin: 0 0 2px !important; }
+      #sidebar-pips-row { margin-top: 2px !important; }
+      #split-stepper-mobile { margin-bottom: 2px !important; }
+      #end-turn-btn { padding-top: 6px; padding-bottom: 6px; }
+    }
 
     /* ── Game Over screen ── */
     #gameover-screen {
@@ -766,12 +789,21 @@
     <div class="game-title">Castles at War</div>
 
     <div class="s-section">
+      <!-- Mobile army split stepper (replaces sound/? row on small screens) -->
+      <div id="split-stepper-mobile">
+        <button class="split-btn" id="split-minus-m">−</button>
+        <div style="text-align:center">
+          <div class="s-label" style="margin:0">Split</div>
+          <span id="split-count-m">1</span>
+        </div>
+        <button class="split-btn" id="split-plus-m">+</button>
+      </div>
       <!-- Row 1: sound (left) + ? (right) -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div id="sidebar-util-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <button id="sound-btn" title="Toggle sound">♫</button>
         <button id="howto-btn">?</button>
       </div>
-      <hr class="sep" style="margin:0 0 10px">
+      <hr id="sidebar-util-sep" class="sep" style="margin:0 0 10px">
       <!-- Row 2: turn number (left) + moves label (right) -->
       <div style="display:flex;align-items:baseline;justify-content:space-between">
         <div class="turn-row">
@@ -781,7 +813,7 @@
         <div class="s-label" style="margin-bottom:0">Moves</div>
       </div>
       <!-- Row 3: your turn label (left) + pips (right), aligned -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+      <div id="sidebar-pips-row" style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
         <div id="active-turn-label" style="color:#c9a84c;font-size:13px;letter-spacing:0.5px">Your Turn</div>
         <div class="pips">
           <div class="pip"></div>
@@ -2405,12 +2437,33 @@ function showEliminationCard(fi, onDone) {
 
 // Show or hide/reposition the army-split stepper near the selected region.
 function positionStepper() {
-  const el = document.getElementById('split-stepper');
-  if (selectedRegion === null || landRegions[selectedRegion].units <= 1
-      || combatBlocked || gameOver || currentFaction !== HUMAN_FACTION) {
+  const el  = document.getElementById('split-stepper');
+  const elM = document.getElementById('split-stepper-mobile');
+  const utilRow = document.getElementById('sidebar-util-row');
+  const utilSep = document.getElementById('sidebar-util-sep');
+  const shouldHide = selectedRegion === null || landRegions[selectedRegion].units <= 1
+                     || combatBlocked || gameOver || currentFaction !== HUMAN_FACTION;
+
+  if (window.innerHeight <= 377) {
     el.style.display = 'none';
+    if (shouldHide) {
+      elM.style.display = 'none';
+      utilRow.style.display = 'flex';
+      utilSep.style.display = '';
+    } else {
+      document.getElementById('split-count-m').textContent = splitCount;
+      elM.style.display = 'flex';
+      utilRow.style.display = 'none';
+      utilSep.style.display = 'none';
+    }
     return;
   }
+
+  // Desktop: restore sidebar util row and use map overlay stepper
+  elM.style.display = 'none';
+  utilRow.style.display = 'flex';
+  utilSep.style.display = '';
+  if (shouldHide) { el.style.display = 'none'; return; }
   const [cx, cy] = centroid(landRegions[selectedRegion].pts);
   el.style.left = `${cx}px`;
   el.style.top  = `${cy - 10}px`;
@@ -2724,6 +2777,20 @@ document.getElementById('split-plus').addEventListener('click', () => {
   if (selectedRegion === null) return;
   splitCount = Math.min(landRegions[selectedRegion].units, splitCount + 1);
   document.getElementById('split-count').textContent = splitCount;
+  render();
+});
+
+document.getElementById('split-minus-m').addEventListener('click', () => {
+  if (selectedRegion === null) return;
+  splitCount = Math.max(1, splitCount - 1);
+  document.getElementById('split-count-m').textContent = splitCount;
+  render();
+});
+
+document.getElementById('split-plus-m').addEventListener('click', () => {
+  if (selectedRegion === null) return;
+  splitCount = Math.min(landRegions[selectedRegion].units, splitCount + 1);
+  document.getElementById('split-count-m').textContent = splitCount;
   render();
 });
 
