@@ -167,6 +167,85 @@
     #palisade-btn:hover:not(:disabled) { background: #1e3828; }
     #palisade-btn:disabled { opacity: 0.35; cursor: default; }
 
+    /* ── Tutorial overlay ── */
+    #tutorial-overlay {
+      position: fixed; inset: 0; z-index: 160;
+      pointer-events: none;
+    }
+    #tutorial-spotlight {
+      position: fixed;
+      border-radius: 8px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.74);
+      pointer-events: none;
+      transition: top .22s ease, left .22s ease, width .22s ease, height .22s ease;
+    }
+    #tutorial-card {
+      position: fixed;
+      background: #1a1206;
+      border: 1px solid #7a5a1a;
+      border-radius: 6px;
+      padding: 14px 16px;
+      max-width: 230px;
+      pointer-events: all;
+      z-index: 161;
+      box-shadow: 0 4px 28px rgba(0,0,0,0.85);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #tutorial-step-num {
+      color: #6a5030;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    #tutorial-text {
+      color: #c0a870;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+    #tutorial-btns {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+    }
+    #tutorial-skip {
+      background: none;
+      color: #5a4020;
+      border: none;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+    #tutorial-skip:hover { color: #8a6040; }
+    #tutorial-next {
+      background: #2a1e08;
+      color: #c9a84c;
+      border: 1px solid #6a4820;
+      border-radius: 3px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 13px;
+      padding: 6px 14px;
+      cursor: pointer;
+      min-height: 36px;
+    }
+    #tutorial-next:hover { background: #3a2810; border-color: #9a6830; }
+    #tutorial-overlay.hint-mode #tutorial-step-num { display: none; }
+    #tutorial-overlay.hint-mode #tutorial-skip { display: none; }
+
+    /* ── Replay tutorial button (How To screen) ── */
+    #replay-tutorial-btn {
+      background: none;
+      color: #5a4020;
+      border: none;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    #replay-tutorial-btn:hover { color: #c0a870; }
+
     /* ── Cancel Move button ── */
     #cancel-move-btn {
       background: #261a08;
@@ -905,6 +984,18 @@
   </div>
 </div>
 
+<div id="tutorial-overlay" style="display:none">
+  <div id="tutorial-spotlight"></div>
+  <div id="tutorial-card">
+    <div id="tutorial-step-num">1 / 5</div>
+    <div id="tutorial-text"></div>
+    <div id="tutorial-btns">
+      <button id="tutorial-skip">Skip</button>
+      <button id="tutorial-next">Next →</button>
+    </div>
+  </div>
+</div>
+
 <div id="howto-screen">
   <div class="howto-inner">
     <div class="howto-card">
@@ -937,6 +1028,10 @@
       <div class="howto-body">
         <p>Each round a <strong>World Event</strong> strikes — floods block coastal regions, wildfires burn the land, rich harvests power up your attacks. No event repeats twice in a row.</p>
         <p>You are eliminated when you lose all armies and all castles.</p>
+      </div>
+      <hr class="howto-sep">
+      <div style="text-align:center; padding: 2px 0 4px">
+        <button id="replay-tutorial-btn">↺ Replay tutorial</button>
       </div>
     </div>
   </div>
@@ -1295,6 +1390,9 @@ let flashState         = null;      // { idx, lit } during battle flash, else nu
 let splitCount         = 0;         // units committed to next move (set when region is selected)
 let lastMoveSnapshot   = null;      // pre-move state for cancel-move undo, null if no move made yet
 let fateDecidedMove    = false;     // true after a tie battle this turn — cancel is then forbidden
+let tutorialStep       = -1;        // -1 = inactive; 0-4 = active tutorial step
+let hintActiveId       = null;      // id of contextual hint currently showing, or null
+let hintGetRect        = null;      // stored getRectFn for the active hint (used on resize)
 const coins            = [0, 0, 0, 0]; // coin balance per faction index
 const eliminated       = [false, false, false, false];
 let gameOver           = false;
@@ -1777,6 +1875,10 @@ function openPalisadePanel(idx) {
   palisadePanelIdx = idx;
   refreshPalisadePanel();
   syncFactionSection();
+  showHint('palisade',
+    'Palisades cost 3 coins and add +1 defence to this region, even with no army present. You can own up to 3 at a time. An enemy who conquers the region destroys the palisade.',
+    () => document.getElementById('palisade-btn').getBoundingClientRect()
+  );
 }
 
 function closePalisadePanel() {
@@ -2443,6 +2545,8 @@ function resize() {
   canvas.height = wrap.clientHeight;
   render();
   positionStepper();
+  if (tutorialStep >= 0) positionTutorial();
+  else if (hintActiveId !== null && hintGetRect) positionOverlay(hintGetRect());
 }
 
 window.addEventListener('resize', resize);
@@ -2645,6 +2749,144 @@ function updateSidebar() {
                        || aiTurnActive || currentFaction !== HUMAN_FACTION || gameOver;
 }
 
+// ─── Tutorial ────────────────────────────────────────────────────────────────
+
+const TUTORIAL_STEPS = [
+  {
+    getText: () => 'Welcome, commander! This is your starting castle — your home base. It produces 1 army unit and 1 coin each turn.',
+    getRect() {
+      const r = landRegions.find(lr => lr.owner === HUMAN_FACTION && lr.type === 'castle');
+      if (!r) return null;
+      const cr = canvas.getBoundingClientRect();
+      const xs = r.pts.map(p => cr.left + sx(p[0]));
+      const ys = r.pts.map(p => cr.top  + sy(p[1]));
+      const pad = 10;
+      return { left: Math.min(...xs) - pad, top: Math.min(...ys) - pad,
+               width: Math.max(...xs) - Math.min(...xs) + pad * 2,
+               height: Math.max(...ys) - Math.min(...ys) + pad * 2 };
+    },
+  },
+  {
+    getText: () => 'Each pip is one move. You get 3 moves per turn — use them to march your armies across the map.',
+    getRect() { return document.getElementById('sidebar-pips-row').getBoundingClientRect(); },
+  },
+  {
+    getText: () => 'Your stats are tracked here — regions held and current coin balance. Spend coins to recruit extra units at your castle.',
+    getRect() { return document.querySelector('.faction-row[data-faction="0"]').getBoundingClientRect(); },
+  },
+  {
+    getText: () => 'Select one of your regions, then tap an adjacent region to move your army there. Moving into neutral or enemy territory triggers combat!',
+    getRect() {
+      const r = document.getElementById('map-wrap').getBoundingClientRect();
+      const p = 12;
+      return { left: r.left + p, top: r.top + p, width: r.width - p * 2, height: r.height - p * 2 };
+    },
+  },
+  {
+    getText: () => 'Finished moving? Press End Turn to collect your income and pass to the next player.',
+    getRect() { return document.getElementById('end-turn-btn').getBoundingClientRect(); },
+  },
+  {
+    getText: () => 'Other players will try to conquer your territories. Combat is simple: the bigger army wins. If armies are evenly matched, fate decides the outcome. Good luck, commander!',
+    getRect() {
+      const r = landRegions.find(lr => lr.owner !== null && lr.owner !== HUMAN_FACTION && lr.type === 'castle')
+             || landRegions.find(lr => lr.owner !== null && lr.owner !== HUMAN_FACTION);
+      if (!r) return document.getElementById('map-wrap').getBoundingClientRect();
+      const cr  = canvas.getBoundingClientRect();
+      const xs  = r.pts.map(p => cr.left + sx(p[0]));
+      const ys  = r.pts.map(p => cr.top  + sy(p[1]));
+      const pad = 10;
+      return { left: Math.min(...xs) - pad, top: Math.min(...ys) - pad,
+               width: Math.max(...xs) - Math.min(...xs) + pad * 2,
+               height: Math.max(...ys) - Math.min(...ys) + pad * 2 };
+    },
+  },
+];
+
+function positionOverlay(rect) {
+  const spot = document.getElementById('tutorial-spotlight');
+  const card = document.getElementById('tutorial-card');
+  spot.style.left   = rect.left   + 'px';
+  spot.style.top    = rect.top    + 'px';
+  spot.style.width  = rect.width  + 'px';
+  spot.style.height = rect.height + 'px';
+
+  const GAP = 14, cw = 246, vw = window.innerWidth, vh = window.innerHeight;
+  const ch  = card.offsetHeight || 130;
+  let cx, cy;
+  if (rect.left + rect.width + GAP + cw <= vw)  cx = rect.left + rect.width + GAP;
+  else if (rect.left - GAP - cw >= 0)            cx = rect.left - GAP - cw;
+  else                                            cx = Math.max(8, Math.min(vw - cw - 8, rect.left));
+  if (rect.top + rect.height + GAP + ch <= vh)   cy = rect.top + rect.height + GAP;
+  else if (rect.top - GAP - ch >= 0)             cy = rect.top - GAP - ch;
+  else                                            cy = Math.max(8, Math.min(vh - ch - 8, rect.top));
+  card.style.left = cx + 'px';
+  card.style.top  = cy + 'px';
+}
+
+function positionTutorial() {
+  if (tutorialStep < 0) return;
+  const step = TUTORIAL_STEPS[tutorialStep];
+  document.getElementById('tutorial-step-num').textContent = `${tutorialStep + 1} / ${TUTORIAL_STEPS.length}`;
+  document.getElementById('tutorial-text').textContent = step.getText();
+  positionOverlay(step.getRect());
+}
+
+// ─── Contextual hints ─────────────────────────────────────────────────────────
+
+function isHintSeen(id) {
+  return (localStorage.getItem('woc_hints') || '').split(',').filter(Boolean).includes(id);
+}
+function markHintSeen(id) {
+  const seen = new Set((localStorage.getItem('woc_hints') || '').split(',').filter(Boolean));
+  seen.add(id);
+  localStorage.setItem('woc_hints', [...seen].join(','));
+}
+function showHint(id, text, getRectFn) {
+  if (isHintSeen(id) || tutorialStep >= 0 || hintActiveId !== null) return;
+  const rect = getRectFn();
+  if (!rect) return;
+  hintActiveId = id;
+  hintGetRect  = getRectFn;
+  document.getElementById('tutorial-text').textContent = text;
+  document.getElementById('tutorial-overlay').classList.add('hint-mode');
+  document.getElementById('tutorial-next').textContent = 'Got it';
+  document.getElementById('tutorial-overlay').style.display = 'block';
+  positionOverlay(rect);
+}
+function dismissHint() {
+  if (hintActiveId === null) return;
+  markHintSeen(hintActiveId);
+  hintActiveId = null;
+  hintGetRect  = null;
+  document.getElementById('tutorial-overlay').classList.remove('hint-mode');
+  document.getElementById('tutorial-next').textContent = 'Next →';
+  document.getElementById('tutorial-overlay').style.display = 'none';
+}
+
+function startTutorial() {
+  tutorialStep = 0;
+  document.getElementById('tutorial-overlay').style.display = 'block';
+  positionTutorial();
+}
+
+function endTutorial() {
+  tutorialStep = -1;
+  hintActiveId = null;
+  hintGetRect  = null;
+  document.getElementById('tutorial-overlay').classList.remove('hint-mode');
+  document.getElementById('tutorial-next').textContent = 'Next →';
+  document.getElementById('tutorial-overlay').style.display = 'none';
+  localStorage.setItem('woc_seen_tutorial', '1');
+}
+
+function advanceTutorial() {
+  if (hintActiveId !== null) { dismissHint(); return; }
+  tutorialStep++;
+  if (tutorialStep >= TUTORIAL_STEPS.length) { endTutorial(); return; }
+  positionTutorial();
+}
+
 // ─── Game start helpers ───────────────────────────────────────────────────────
 
 function showSetupScreen() {
@@ -2700,6 +2942,7 @@ function beginGame() {
   applyAudioState();
   drawWorldEvent(() => {
     if (currentFaction !== HUMAN_FACTION) runAiTurn();
+    if (!localStorage.getItem('woc_seen_tutorial')) startTutorial();
   });
 }
 
@@ -2801,6 +3044,21 @@ canvas.addEventListener('click', e => {
   render();
   updateSidebar();
   positionStepper();
+
+  // Army split hint: fires the first time the player selects their own castle with >1 unit
+  if (selectedRegion !== null && landRegions[selectedRegion].type === 'castle'
+      && landRegions[selectedRegion].units > 1) {
+    setTimeout(() => showHint('split',
+      'You can split your army before moving. Use − and + to choose how many units to send. Sending fewer is faster, but a smaller force is weaker in battle.',
+      () => {
+        const st = window.innerHeight <= 377
+          ? document.getElementById('split-stepper-mobile')
+          : document.getElementById('split-stepper');
+        return (st && st.offsetParent) ? st.getBoundingClientRect()
+                                       : document.getElementById('sidebar-pips-row').getBoundingClientRect();
+      }
+    ), 50);
+  }
 });
 
 document.getElementById('end-turn-btn').addEventListener('click', () => {
@@ -2809,6 +3067,17 @@ document.getElementById('end-turn-btn').addEventListener('click', () => {
 
 document.getElementById('cancel-move-btn').addEventListener('click', () => {
   if (!combatBlocked && !aiTurnActive && currentFaction === HUMAN_FACTION && !gameOver) undoLastMove();
+});
+
+document.getElementById('tutorial-next').addEventListener('click', advanceTutorial);
+document.getElementById('tutorial-skip').addEventListener('click', endTutorial);
+
+document.getElementById('replay-tutorial-btn').addEventListener('click', () => {
+  localStorage.removeItem('woc_seen_tutorial');
+  localStorage.removeItem('woc_hints');
+  const btn = document.getElementById('replay-tutorial-btn');
+  btn.textContent = 'Will show next new game ✓';
+  setTimeout(() => { btn.textContent = '↺ Replay tutorial'; }, 1800);
 });
 
 document.getElementById('sound-btn').addEventListener('click', toggleSound);
