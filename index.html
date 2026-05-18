@@ -167,6 +167,24 @@
     #palisade-btn:hover:not(:disabled) { background: #1e3828; }
     #palisade-btn:disabled { opacity: 0.35; cursor: default; }
 
+    /* ── Cancel Move button ── */
+    #cancel-move-btn {
+      background: #261a08;
+      color: #c9a84c;
+      border: 1px solid #6a4820;
+      border-radius: 3px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 15px;
+      min-width: 28px; min-height: 28px;
+      padding: 2px 8px;
+      cursor: pointer;
+      user-select: none;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    #cancel-move-btn:hover:not(:disabled) { background: #3a2810; border-color: #8a6030; }
+    #cancel-move-btn:disabled { opacity: 0.28; cursor: default; color: #4a3018; border-color: #3a2810; }
+
     /* ── Sidebar coin-icon tooltip ── */
     .tooltip-wrapper {
       position: relative;
@@ -798,9 +816,13 @@
         </div>
         <button class="split-btn" id="split-plus-m">+</button>
       </div>
-      <!-- Row 1: sound (left) + ? (right) -->
+      <!-- Row 1: sound (left) + cancel (centre) + ? (right) -->
       <div id="sidebar-util-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <button id="sound-btn" title="Toggle sound">♫</button>
+        <div class="tooltip-wrapper">
+          <button id="cancel-move-btn" disabled>↩</button>
+          <span class="tooltip-text" style="right:auto;left:50%;transform:translateX(-50%)">Cancel Move</span>
+        </div>
         <button id="howto-btn">?</button>
       </div>
       <hr id="sidebar-util-sep" class="sep" style="margin:0 0 10px">
@@ -1271,6 +1293,8 @@ let selectedRegion  = null;        // land-region index owned by player 0, or nu
 let combatBlocked      = false;     // true while any combat animation is playing
 let flashState         = null;      // { idx, lit } during battle flash, else null
 let splitCount         = 0;         // units committed to next move (set when region is selected)
+let lastMoveSnapshot   = null;      // pre-move state for cancel-move undo, null if no move made yet
+let fateDecidedMove    = false;     // true after a tie battle this turn — cancel is then forbidden
 const coins            = [0, 0, 0, 0]; // coin balance per faction index
 const eliminated       = [false, false, false, false];
 let gameOver           = false;
@@ -1378,6 +1402,42 @@ function runCombatFlash(idx, color, onDone) {
   tick();
 }
 
+function snapshotBeforeMove(fromIdx, toIdx) {
+  const from = landRegions[fromIdx];
+  const to   = landRegions[toIdx];
+  lastMoveSnapshot = {
+    fromIdx, toIdx,
+    fromUnits:           from.units,
+    toUnits:             to.units,
+    toOwner:             to.owner,
+    toHasPalisade:       to.hasPalisade,
+    movesLeftBefore:     movesLeft,
+    toWasInMovedRegions: movedRegions.has(toIdx),
+    eliminatedBefore:    eliminated.slice(),
+  };
+  fateDecidedMove = false;
+}
+
+function undoLastMove() {
+  if (!lastMoveSnapshot || fateDecidedMove) return;
+  const s    = lastMoveSnapshot;
+  const from = landRegions[s.fromIdx];
+  const to   = landRegions[s.toIdx];
+  from.units     = s.fromUnits;
+  to.units       = s.toUnits;
+  to.owner       = s.toOwner;
+  to.hasPalisade = s.toHasPalisade;
+  movesLeft      = s.movesLeftBefore;
+  if (!s.toWasInMovedRegions) movedRegions.delete(s.toIdx);
+  s.eliminatedBefore.forEach((v, i) => { eliminated[i] = v; });
+  lastMoveSnapshot = null;
+  selectedRegion   = null;
+  closeRecruitPanel();
+  closePalisadePanel();
+  updateSidebar();
+  render();
+}
+
 // Execute a move from fromIdx into toIdx.  onComplete is called when the move
 // (including any combat animation) has fully resolved; omit for human moves.
 // commitUnits: how many units to send (defaults to all).  Remaining units stay
@@ -1470,6 +1530,7 @@ function executeMove(fromIdx, toIdx, onComplete, commitUnits) {
       setTimeout(() => {
         if (Math.random() < 0.5) resolveAttackerWins(1);
         else                      resolveDefenderWins(to.units > 0 ? 1 : 0);
+        if (attacker === HUMAN_FACTION) fateDecidedMove = true;
         combatBlocked = false;
         checkEliminations(shouldEnd => {
           if (shouldEnd) { showGameOver(); return; }
@@ -1778,6 +1839,8 @@ function endFactionTurn() {
 
   // Reset per-faction-turn state
   movedRegions.clear();
+  lastMoveSnapshot = null;
+  fateDecidedMove  = false;
   selectedRegion = null;
   recruitedThisTurn = 0;
   closeRecruitPanel();
@@ -2575,6 +2638,11 @@ function updateSidebar() {
   // End Turn button — disabled during AI turns
   const btn = document.getElementById('end-turn-btn');
   btn.disabled = aiTurnActive || currentFaction !== HUMAN_FACTION;
+
+  // Cancel Move button — disabled when nothing to undo, after fate-decided battles, or during AI/combat
+  const cancelBtn = document.getElementById('cancel-move-btn');
+  cancelBtn.disabled = !lastMoveSnapshot || fateDecidedMove || combatBlocked
+                       || aiTurnActive || currentFaction !== HUMAN_FACTION || gameOver;
 }
 
 // ─── Game start helpers ───────────────────────────────────────────────────────
@@ -2600,6 +2668,8 @@ function beginGame() {
   aiTurnActive      = false;
   movesLeft         = movesForFaction(0);
   movedRegions.clear();
+  lastMoveSnapshot  = null;
+  fateDecidedMove   = false;
   selectedRegion    = null;
   combatBlocked     = false;
   flashState        = null;
@@ -2691,6 +2761,7 @@ canvas.addEventListener('click', e => {
     // Moving into adjacent region — close panels, execute move with committed split
     closeRecruitPanel();
     closePalisadePanel();
+    snapshotBeforeMove(selectedRegion, hit);
     animatedMove(selectedRegion, hit, undefined, splitCount);
   } else {
     const isOwnCastle = hit !== -1 && landRegions[hit].owner === HUMAN_FACTION && landRegions[hit].type === 'castle';
@@ -2734,6 +2805,10 @@ canvas.addEventListener('click', e => {
 
 document.getElementById('end-turn-btn').addEventListener('click', () => {
   if (!combatBlocked && !aiTurnActive && currentFaction === HUMAN_FACTION) endFactionTurn();
+});
+
+document.getElementById('cancel-move-btn').addEventListener('click', () => {
+  if (!combatBlocked && !aiTurnActive && currentFaction === HUMAN_FACTION && !gameOver) undoLastMove();
 });
 
 document.getElementById('sound-btn').addEventListener('click', toggleSound);
